@@ -1,0 +1,112 @@
+{
+  "name": "Transcriber - API Recordings",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "api/recordings",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook-recordings",
+      "name": "Get Recordings API",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        240,
+        304
+      ],
+      "webhookId": "api-recordings"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract user email from Cloudflare Access headers\nconst inputData = $input.first() || {};\nconst headers = inputData.headers || {};\nconst query = inputData.query || {};\n\nconst userEmail = headers['cf-access-authenticated-user-email'] || \n                  headers['CF-Access-Authenticated-User-Email'] ||\n                  headers['cf_access_authenticated_user_email'] ||\n                  'ben@solfamily.group';\nconst limit = parseInt(query.limit) || 50;\n\nreturn {\n  userEmail,\n  limit\n};"
+      },
+      "id": "parse-request",
+      "name": "Parse Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        464,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT r.id, r.name, r.mode, r.created_at, r.duration_seconds, r.status FROM transcriber.recordings r INNER JOIN transcriber.users u ON r.user_id = u.id WHERE u.email = '{{ $json.userEmail }}' ORDER BY r.created_at DESC LIMIT {{ $json.limit }}",
+        "options": {}
+      },
+      "id": "get-recordings",
+      "name": "Get User Recordings",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        688,
+        304
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "OMZYbl9bxs7QVk3p",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Return the recordings in the expected format\nconst recordings = $input.all().map(item => item.json);\nreturn { items: recordings };"
+      },
+      "id": "format-response",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        912,
+        304
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Get Recordings API": {
+      "main": [
+        [
+          {
+            "node": "Parse Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Request": {
+      "main": [
+        [
+          {
+            "node": "Get User Recordings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get User Recordings": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {},
+  "versionId": "71d661a0-c36c-431a-93ec-420e0c718b18",
+  "meta": {
+    "instanceId": "abfe09676dfbf795c9ccb50b58f5253d6d13f06369b5cd61be28c22aae4babbb"
+  },
+  "id": "jHeWtPTYTBC5f0eE",
+  "tags": []
+}

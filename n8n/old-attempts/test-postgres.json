@@ -1,0 +1,75 @@
+{
+  "name": "Test Postgres Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "api/test-postgres",
+        "options": {}
+      },
+      "id": "webhook-test-postgres",
+      "name": "Test Postgres Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "api-test-postgres"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT 1 as test",
+        "additionalFields": {}
+      },
+      "id": "test-postgres-query",
+      "name": "Test Postgres Query",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [460, 300],
+      "credentials": {
+        "postgres": {
+          "id": "postgres_main",
+          "name": "PostgreSQL Main DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "respond-postgres",
+      "name": "Respond Postgres",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [680, 300]
+    }
+  ],
+  "connections": {
+    "Test Postgres Webhook": {
+      "main": [
+        [
+          {
+            "node": "Test Postgres Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Test Postgres Query": {
+      "main": [
+        [
+          {
+            "node": "Respond Postgres",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {},
+  "id": "test-postgres"
+}

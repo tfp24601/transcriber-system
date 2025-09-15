@@ -1,0 +1,120 @@
+{
+  "name": "Test Minimal Transcribe",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "transcribe-job-minimal",
+        "options": {}
+      },
+      "id": "webhook-transcribe-minimal",
+      "name": "Transcribe Job Webhook Minimal",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "transcribe-job-minimal"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().body;\nreturn { recordingId: data.recordingId || 'test-123', audioPath: data.audioPath || '/tmp/test.wav' };"
+      },
+      "id": "parse-job-minimal",
+      "name": "Parse Job Minimal",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "fileSelector": "={{ $json.audioPath }}"
+      },
+      "id": "read-audio-minimal",
+      "name": "Read Audio Minimal",
+      "type": "n8n-nodes-base.readBinaryFiles",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE transcriber.recordings SET status = $1 WHERE id = $2",
+        "additionalFields": {
+          "queryParameters": "={{ ['processing', $node[\"Parse Job Minimal\"].json[\"recordingId\"]] }}"
+        }
+      },
+      "id": "update-status-minimal",
+      "name": "Update Status Minimal",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [900, 300],
+      "credentials": {
+        "postgres": {
+          "id": "postgres_main",
+          "name": "PostgreSQL Main DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"message\": \"processing started\", \"recordingId\": $node[\"Parse Job Minimal\"].json[\"recordingId\"] } }}"
+      },
+      "id": "respond-minimal",
+      "name": "Respond Minimal",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1120, 300]
+    }
+  ],
+  "connections": {
+    "Transcribe Job Webhook Minimal": {
+      "main": [
+        [
+          {
+            "node": "Parse Job Minimal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Job Minimal": {
+      "main": [
+        [
+          {
+            "node": "Read Audio Minimal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Audio Minimal": {
+      "main": [
+        [
+          {
+            "node": "Update Status Minimal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Status Minimal": {
+      "main": [
+        [
+          {
+            "node": "Respond Minimal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {},
+  "id": "test-minimal-transcribe"
+}

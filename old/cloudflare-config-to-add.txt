@@ -1,0 +1,6 @@
+# Add this to your cloudflared config.yml on Lunanode4
+# In the ingress section, before the catch-all rule
+
+  # Rule for Transcriber
+  - hostname: transcriber.solfamily.group
+    service: http://localhost:8000

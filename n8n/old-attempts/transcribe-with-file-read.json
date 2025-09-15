@@ -1,0 +1,120 @@
+{
+  "name": "Transcriber - With File Read",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "transcribe-with-file",
+        "options": {}
+      },
+      "id": "webhook-transcribe-file",
+      "name": "Transcribe File Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "transcribe-with-file"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().body;\nconst recordingId = data.recordingId || 'test-123';\nconst audioPath = data.audioPath || '/tmp/test.wav';\n\nreturn {\n  recordingId,\n  audioPath\n};"
+      },
+      "id": "parse-file-request",
+      "name": "Parse File Request", 
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "fileSelector": "={{ $json.audioPath }}"
+      },
+      "id": "read-file",
+      "name": "Read File",
+      "type": "n8n-nodes-base.readBinaryFiles",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE transcriber.recordings SET status = $1 WHERE id = $2",
+        "additionalFields": {
+          "queryParameters": "={{ ['processing', $node[\"Parse File Request\"].json[\"recordingId\"]] }}"
+        }
+      },
+      "id": "update-file-status",
+      "name": "Update File Status",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [900, 300],
+      "credentials": {
+        "postgres": {
+          "id": "postgres_main",
+          "name": "PostgreSQL Main DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"message\": \"file processed\", \"recordingId\": $node[\"Parse File Request\"].json[\"recordingId\"] } }}"
+      },
+      "id": "respond-file",
+      "name": "Respond File",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1120, 300]
+    }
+  ],
+  "connections": {
+    "Transcribe File Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse File Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse File Request": {
+      "main": [
+        [
+          {
+            "node": "Read File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read File": {
+      "main": [
+        [
+          {
+            "node": "Update File Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update File Status": {
+      "main": [
+        [
+          {
+            "node": "Respond File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {},
+  "id": "transcriber-with-file-read"
+}

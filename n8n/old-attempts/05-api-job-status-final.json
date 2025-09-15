@@ -1,0 +1,173 @@
+{
+  "name": "Transcriber - API Job Status",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "api/jobs/:jobId",
+        "options": {}
+      },
+      "id": "webhook-job-status",
+      "name": "Get Job Status API",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "api-job-status"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract user email and job ID (which is the recording ID)\nconst userEmail = $input.first().headers['cf-access-authenticated-user-email'] || 'test@solfamily.group';\nconst jobId = $input.first().params?.jobId;\n\nreturn {\n  userEmail,\n  jobId\n};"
+      },
+      "id": "parse-job-request",
+      "name": "Parse Job Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT r.id, r.status, r.created_at, r.started_at, r.completed_at, r.error_message FROM transcriber.recordings r INNER JOIN transcriber.users u ON r.user_id = u.id WHERE u.email = $1 AND r.id = $2",
+        "additionalFields": {
+          "queryParameters": "={{ [$node[\"Parse Job Request\"].json[\"userEmail\"], $node[\"Parse Job Request\"].json[\"jobId\"]] }}"
+        }
+      },
+      "id": "get-job-status",
+      "name": "Get Job Status",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [680, 300],
+      "credentials": {
+        "postgres": {
+          "id": "postgres_main",
+          "name": "PostgreSQL Main DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ]
+        }
+      },
+      "id": "check-job-exists",
+      "name": "Check Job Exists",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const job = $input.first().json[0];\n\n// Calculate progress based on status and timestamps\nlet progress = 0;\nswitch (job.status) {\n  case 'queued':\n    progress = 0;\n    break;\n  case 'processing':\n    // Estimate progress based on time elapsed (rough estimate)\n    if (job.started_at) {\n      const startTime = new Date(job.started_at);\n      const now = new Date();\n      const elapsedMinutes = (now - startTime) / (1000 * 60);\n      // Assume average processing takes 5 minutes for rough progress\n      progress = Math.min(0.8, elapsedMinutes / 5);\n    } else {\n      progress = 0.1;\n    }\n    break;\n  case 'done':\n    progress = 1;\n    break;\n  case 'failed':\n    progress = 0;\n    break;\n  default:\n    progress = 0;\n}\n\nreturn {\n  id: job.id,\n  status: job.status,\n  progress: progress,\n  error_message: job.error_message,\n  created_at: job.created_at,\n  started_at: job.started_at,\n  completed_at: job.completed_at\n};"
+      },
+      "id": "build-job-response",
+      "name": "Build Job Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "respond-job-status",
+      "name": "Respond Job Status",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1340, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseCode": 404,
+        "responseBody": "={{ { \"error\": \"Job not found\" } }}"
+      },
+      "id": "respond-job-not-found",
+      "name": "Respond Job Not Found",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1120, 400]
+    }
+  ],
+  "connections": {
+    "Get Job Status API": {
+      "main": [
+        [
+          {
+            "node": "Parse Job Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Job Request": {
+      "main": [
+        [
+          {
+            "node": "Get Job Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Job Status": {
+      "main": [
+        [
+          {
+            "node": "Check Job Exists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Job Exists": {
+      "main": [
+        [
+          {
+            "node": "Build Job Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Job Not Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Job Response": {
+      "main": [
+        [
+          {
+            "node": "Respond Job Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {},
+  "id": "transcriber-api-job-status-final"
+}

@@ -1,0 +1,80 @@
+# Transcriber System Routes
+# Add this to your main Caddyfile on Lunanode4
+
+# Main transcriber web interface
+http://transcriber.solfamily.group {
+    # Security headers
+    header {
+        X-Frame-Options DENY
+        X-Content-Type-Options nosniff
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy strict-origin-when-cross-origin
+        X-Robots-Tag "noindex, nofollow"
+        Permissions-Policy "microphone=(), camera=(), geolocation=()"
+        
+        # CORS for API requests
+        Access-Control-Allow-Origin "https://transcriber.solfamily.group"
+        Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+        Access-Control-Allow-Headers "Authorization, Content-Type, CF-Access-Jwt-Assertion"
+    }
+
+    # Handle preflight requests
+    @cors_preflight method OPTIONS
+    respond @cors_preflight 200
+
+    # API routes to n8n
+    handle /api/* {
+        reverse_proxy 192.168.50.10:5678 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    # File ingest endpoint to n8n  
+    handle /ingest {
+        reverse_proxy 192.168.50.10:5678 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    # Resumable uploads to tusd
+    handle /uploads/* {
+        reverse_proxy 192.168.50.10:1080 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    # File downloads - proxy with auth check
+    handle /downloads/* {
+        reverse_proxy 192.168.50.10:5678 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    # Main web app (default)
+    handle {
+        reverse_proxy 192.168.50.10:3010 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    # Logging
+    log {
+        output file /var/log/caddy/transcriber.log
+        format json
+    }
+}

@@ -1,0 +1,210 @@
+{
+  "name": "Transcriber - API Recording Detail",
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "6e99e9d6-4133-46d0-8f4d-e4d333af57ce",
+              "leftValue": "={{ $json.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        624,
+        0
+      ],
+      "id": "94698740-142e-4d77-8e21-13fdbf040291",
+      "name": "Check Recording Exists"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT r.*, t.text_path, t.vtt_path, t.srt_path, t.words_json_path, t.diarization_json_path, t.language_detected, t.speaker_count\nFROM transcriber.recordings r\nINNER JOIN transcriber.users u ON r.user_id = u.id\nLEFT JOIN transcriber.transcripts t ON r.id = t.recording_id\nWHERE u.email = $1 AND r.id = $2\n",
+        "options": {
+          "queryReplacement": "={{ $node[\"Parse Detail Request\"].json[\"userEmail\"] }} {{ $node[\"Parse Detail Request\"].json[\"recordingId\"] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        416,
+        0
+      ],
+      "id": "acddb79f-f843-4347-aff8-c1f164993a13",
+      "name": "Get Recording Detail",
+      "credentials": {
+        "postgres": {
+          "id": "OMZYbl9bxs7QVk3p",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const userEmail = $input.first().headers['cf-access-authenticated-user-email'] || 'test@solfamily.group';\nconst recordingId = $input.first().params?.recordingId;\nreturn {\n  userEmail,\n  recordingId\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "46ebd967-85d3-46bc-b4ce-a627ec395425",
+      "name": "Parse Detail Request"
+    },
+    {
+      "parameters": {
+        "path": "api/recordings/:recordingId",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "f47cb1bd-fc00-4a45-bdb7-e2112e0fbdf9",
+      "name": "Get Recording Detail API",
+      "webhookId": "1fa75f2a-03d3-4739-9399-37f73c1e974a"
+    },
+    {
+      "parameters": {
+        "jsCode": "const record = $json[0];\n\n// Example: constructing download URLs and summary fields\nreturn {\n  id: record.id,\n  status: record.status,\n  textUrl: record.text_path ? `https://yourfileserver/${record.text_path}` : null,\n  vttUrl: record.vtt_path ? `https://yourfileserver/${record.vtt_path}` : null,\n  srtUrl: record.srt_path ? `https://yourfileserver/${record.srt_path}` : null,\n  wordsUrl: record.words_json_path ? `https://yourfileserver/${record.words_json_path}` : null,\n  diarizationUrl: record.diarization_json_path ? `https://yourfileserver/${record.diarization_json_path}` : null,\n  language: record.language_detected,\n  speakerCount: record.speaker_count,\n  createdAt: record.created_at,\n  completedAt: record.completed_at,\n  // Add any additional fields you want here\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        832,
+        -96
+      ],
+      "id": "d7d2c10c-12b5-475a-b134-2d126c69a73a",
+      "name": "Build Detail Response"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1040,
+        -96
+      ],
+      "id": "b2599ba8-b1b6-4c42-9c3e-e036b1abe9b0",
+      "name": "Respond with Detail"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"error\": \"Recording not found\" } }}",
+        "options": {
+          "responseCode": 404
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        832,
+        96
+      ],
+      "id": "5e951e70-d0aa-4c24-a338-e79337611ca0",
+      "name": "Respond Not Found"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Get Recording Detail": {
+      "main": [
+        [
+          {
+            "node": "Check Recording Exists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Detail Request": {
+      "main": [
+        [
+          {
+            "node": "Get Recording Detail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Recording Detail API": {
+      "main": [
+        [
+          {
+            "node": "Parse Detail Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Recording Exists": {
+      "main": [
+        [
+          {
+            "node": "Build Detail Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Not Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Detail Response": {
+      "main": [
+        [
+          {
+            "node": "Respond with Detail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "beee7fb2-0e68-49b7-969f-4d84490b055b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "abfe09676dfbf795c9ccb50b58f5253d6d13f06369b5cd61be28c22aae4babbb"
+  },
+  "id": "jMdvnYl96IG4JzzV",
+  "tags": []
+}
