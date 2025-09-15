@@ -1,0 +1,98 @@
+{
+  "name": "Test Query Params Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "api/test-query-params",
+        "options": {}
+      },
+      "id": "webhook-test-params",
+      "name": "Test Query Params Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "api-test-query-params"
+    },
+    {
+      "parameters": {
+        "jsCode": "return { testValue: 'hello' };"
+      },
+      "id": "test-code-node",
+      "name": "Test Code Node",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT $1 as test_result",
+        "additionalFields": {
+          "queryParameters": "={{ [$node[\"Test Code Node\"].json[\"testValue\"]] }}"
+        }
+      },
+      "id": "test-query-params",
+      "name": "Test Query Params",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [680, 300],
+      "credentials": {
+        "postgres": {
+          "id": "postgres_main",
+          "name": "PostgreSQL Main DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "respond-params",
+      "name": "Respond Params",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [900, 300]
+    }
+  ],
+  "connections": {
+    "Test Query Params Webhook": {
+      "main": [
+        [
+          {
+            "node": "Test Code Node",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Test Code Node": {
+      "main": [
+        [
+          {
+            "node": "Test Query Params",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Test Query Params": {
+      "main": [
+        [
+          {
+            "node": "Respond Params",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {},
+  "id": "test-query-params"
+}

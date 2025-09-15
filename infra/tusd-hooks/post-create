@@ -1,0 +1,41 @@
+#!/bin/bash
+
+# Tusd post-create hook
+# Called when a new upload is created
+
+# Log the upload creation
+echo "$(date): Upload created - ID: $TUS_ID" >> /tmp/tusd.log
+
+# Extract upload info from environment variables
+UPLOAD_ID="$TUS_ID"
+FILE_SIZE="$TUS_SIZE" 
+UPLOAD_METADATA="$TUS_METADATA"
+
+# Parse metadata (base64 encoded key-value pairs)
+# Format: filename <base64>,mode <base64>,name <base64>
+MODE=""
+NAME=""
+FILENAME=""
+
+if [[ -n "$UPLOAD_METADATA" ]]; then
+    # Parse metadata pairs
+    IFS=',' read -ra METADATA_PAIRS <<< "$UPLOAD_METADATA"
+    for pair in "${METADATA_PAIRS[@]}"; do
+        IFS=' ' read -ra KEYVALUE <<< "$pair"
+        if [[ ${#KEYVALUE[@]} -eq 2 ]]; then
+            KEY="${KEYVALUE[0]}"
+            VALUE=$(echo "${KEYVALUE[1]}" | base64 -d 2>/dev/null || echo "${KEYVALUE[1]}")
+            
+            case "$KEY" in
+                filename) FILENAME="$VALUE" ;;
+                mode) MODE="$VALUE" ;;
+                name) NAME="$VALUE" ;;
+            esac
+        fi
+    done
+fi
+
+# Log parsed metadata
+echo "$(date): Parsed metadata - Mode: $MODE, Name: $NAME, Filename: $FILENAME" >> /tmp/tusd.log
+
+exit 0

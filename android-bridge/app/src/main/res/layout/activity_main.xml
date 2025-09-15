@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center">
+
+        <ImageView
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:src="@mipmap/ic_launcher"
+            android:layout_marginBottom="16dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Transcriber Bridge"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Voice recording bridge for transcriber.solfamily.group"
+            android:textSize="14sp"
+            android:textColor="#666"
+            android:textAlignment="center"
+            android:layout_marginBottom="32dp" />
+
+        <TextView
+            android:id="@+id/tvPermissionStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="⚠ Checking permissions..."
+            android:textSize="16sp"
+            android:padding="12dp"
+            android:background="#FFF3CD"
+            android:textColor="#856404"
+            android:layout_marginBottom="16dp" />
+
+        <Button
+            android:id="@+id/btnRequestPermissions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Grant Permissions"
+            android:layout_marginBottom="24dp"
+            android:visibility="gone" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Test Deep Links"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="16dp" />
+
+        <Button
+            android:id="@+id/btnSingleTest"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:text="👤 Test Single Recording"
+            android:textSize="16sp"
+            android:layout_marginBottom="12dp"
+            android:backgroundTint="#28a745" />
+
+        <Button
+            android:id="@+id/btnMultiTest"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:text="👥 Test Multi Recording"
+            android:textSize="16sp"
+            android:layout_marginBottom="24dp"
+            android:backgroundTint="#17a2b8" />
+
+        <Button
+            android:id="@+id/btnOpenWeb"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🌐 Open Web Interface"
+            android:layout_marginBottom="16dp"
+            style="?android:attr/buttonBarButtonStyle" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="How to use:\n\n1. Grant microphone permissions above\n2. Open transcriber.solfamily.group in browser\n3. Tap recording buttons to test deep linking\n4. Or use test buttons above for manual testing"
+            android:textSize="12sp"
+            android:textColor="#666"
+            android:padding="16dp"
+            android:background="#F8F9FA"
+            android:layout_marginTop="16dp" />
+
+    </LinearLayout>
+</ScrollView>

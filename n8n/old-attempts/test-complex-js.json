@@ -1,0 +1,67 @@
+{
+  "name": "Test Complex JS Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "api/test-complex-js",
+        "options": {}
+      },
+      "id": "webhook-test-js",
+      "name": "Test Complex JS Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "api-test-complex-js"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process transcription result for single mode\nconst transcription = $input.first().json;\nconst recordingId = 'test-123';\nconst audioPath = '/data/audio/1/test.wav';\nconst userId = audioPath.split('/')[3]; // Extract from path\n\n// Prepare file paths\nconst transcriptDir = `/data/transcripts/${userId}`;\nconst textPath = `${transcriptDir}/${recordingId}.txt`;\nconst vttPath = `${transcriptDir}/${recordingId}.vtt`;\nconst srtPath = `${transcriptDir}/${recordingId}.srt`;\nconst jsonPath = `${transcriptDir}/${recordingId}.json`;\n\n// Extract text and metadata\nconst transcriptText = 'test text';\nconst language = 'unknown';\nconst duration = 0;\n\n// Generate VTT format\nlet vttContent = 'WEBVTT\\n\\n';\nlet srtContent = '';\n\nfunction formatTime(seconds) {\n  const hrs = Math.floor(seconds / 3600);\n  const mins = Math.floor((seconds % 3600) / 60);\n  const secs = (seconds % 60).toFixed(3);\n  return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.padStart(6, '0')}`;\n}\n\nfunction formatSRTTime(seconds) {\n  const hrs = Math.floor(seconds / 3600);\n  const mins = Math.floor((seconds % 3600) / 60);\n  const secs = (seconds % 60).toFixed(3).replace('.', ',');\n  return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.padStart(6, '0')}`;\n}\n\nreturn {\n  recordingId,\n  userId,\n  transcriptDir,\n  textPath,\n  vttPath,\n  srtPath,\n  jsonPath,\n  transcriptText,\n  vttContent,\n  srtContent,\n  jsonContent: JSON.stringify({test: 'data'}, null, 2),\n  language,\n  duration,\n  mode: 'single'\n};"
+      },
+      "id": "test-complex-js-node",
+      "name": "Test Complex JS Node",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "respond-js",
+      "name": "Respond JS",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [680, 300]
+    }
+  ],
+  "connections": {
+    "Test Complex JS Webhook": {
+      "main": [
+        [
+          {
+            "node": "Test Complex JS Node",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Test Complex JS Node": {
+      "main": [
+        [
+          {
+            "node": "Respond JS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {},
+  "id": "test-complex-js"
+}

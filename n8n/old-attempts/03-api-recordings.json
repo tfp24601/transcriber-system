@@ -1,0 +1,98 @@
+{
+  "name": "Transcriber - API Recordings",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "api/recordings",
+        "options": {}
+      },
+      "id": "webhook-recordings",
+      "name": "Get Recordings API",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "api-recordings"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract user email from Cloudflare Access headers\nconst userEmail = $input.first().headers['cf-access-authenticated-user-email'] || 'test@solfamily.group';\nconst limit = parseInt($input.first().query.limit) || 50;\n\nreturn {\n  userEmail,\n  limit\n};"
+      },
+      "id": "parse-request",
+      "name": "Parse Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT r.id, r.name, r.mode, r.created_at, r.duration_seconds, r.status FROM transcriber.recordings r INNER JOIN transcriber.users u ON r.user_id = u.id WHERE u.email = $1 ORDER BY r.created_at DESC LIMIT $2",
+        "additionalFields": {
+          "queryParameters": "={{ [$node[\"Parse Request\"].json[\"userEmail\"], $node[\"Parse Request\"].json[\"limit\"]] }}"
+        }
+      },
+      "id": "get-recordings",
+      "name": "Get User Recordings",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [680, 300],
+      "credentials": {
+        "postgres": {
+          "id": "postgres_main",
+          "name": "PostgreSQL Main DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"items\": $json } }}"
+      },
+      "id": "respond-recordings",
+      "name": "Respond with Recordings",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [900, 300]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Get Recordings API": {
+      "main": [
+        [
+          {
+            "node": "Parse Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Request": {
+      "main": [
+        [
+          {
+            "node": "Get User Recordings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get User Recordings": {
+      "main": [
+        [
+          {
+            "node": "Respond with Recordings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {},
+  "id": "transcriber-api-recordings"
+}

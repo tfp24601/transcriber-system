@@ -1,0 +1,98 @@
+{
+  "name": "Transcriber - Simple Test",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "transcribe-test",
+        "options": {}
+      },
+      "id": "webhook-transcribe-test",
+      "name": "Transcribe Test Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "transcribe-test"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().body;\nconst recordingId = data.recordingId || 'test-123';\n\nreturn {\n  recordingId\n};"
+      },
+      "id": "parse-test-request",
+      "name": "Parse Test Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE transcriber.recordings SET status = $1 WHERE id = $2",
+        "additionalFields": {
+          "queryParameters": "={{ ['processing', $node[\"Parse Test Request\"].json[\"recordingId\"]] }}"
+        }
+      },
+      "id": "update-test-status",
+      "name": "Update Test Status",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [680, 300],
+      "credentials": {
+        "postgres": {
+          "id": "postgres_main",
+          "name": "PostgreSQL Main DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"message\": \"updated\", \"recordingId\": $node[\"Parse Test Request\"].json[\"recordingId\"] } }}"
+      },
+      "id": "respond-test",
+      "name": "Respond Test",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [900, 300]
+    }
+  ],
+  "connections": {
+    "Transcribe Test Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Test Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Test Request": {
+      "main": [
+        [
+          {
+            "node": "Update Test Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Test Status": {
+      "main": [
+        [
+          {
+            "node": "Respond Test",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": true,
+  "settings": {},
+  "id": "transcriber-simple-test"
+}

@@ -3,7 +3,7 @@
 **Goal:**
 Build a private, multi-user **transcriber system** that feels like one-tap "record → send → read transcript" on phones and desktop, while keeping **recording** and **transcription** decoupled for reliability and privacy. Phones use native capture (for screen-off recording), then upload to the web app which orchestrates transcription on my home server (Sol). Long-term reliability > fancy UI.
 
-**Key Principles:**
+3. **Add to the `docker-compose.yml`** whatever additional is needed for this: already have n8n, postgres, will need transcriber-asr-gateway, transcriber-whisperx-worker, (optional tusd), volumes for `/files/` and `/data/transcripts`.*Key Principles:**
 
 * **Privacy-first** (no third-party clouds; audio stored on Sol).
 * **Decoupled**: Recording is native (Android/iOS); the **web app is a transcriber + launcher**.
@@ -41,10 +41,12 @@ Build a private, multi-user **transcriber system** that feels like one-tap "reco
 **Server (Sol)**
 
 * **n8n** orchestrates ingest/transcribe jobs via webhook endpoints.
-* **ASR**: **Faster-Whisper OpenAI-compatible server** (GPU), model switchable by mode.
-* **WhisperX worker** (GPU) for diarization + word-level timestamps (used for 👥 mode).
-* **Postgres** for users/recordings/transcripts metadata.
-* **File storage** on disk (bind mounts): `/data/audio/<user_id>/<recording_id>.flac` (or `.wav`), `/data/transcripts/<user_id>/<recording_id>.{txt,srt,vtt,json}`.
+* **ASR**: **transcriber-asr-gateway** (Faster-Whisper OpenAI-compatible server, GPU), model switchable by mode.
+* **WhisperX worker**: **transcriber-whisperx-worker** (GPU) for diarization + word-level timestamps (used for 👥 mode).
+* **Postgres** for users/recordings/transcripts metadata (transcriber schema).
+* **File storage** on disk (bind mounts): 
+  * **Audio uploads**: `/files/<user_id>/<recording_id>.<ext>` (volume: `./local-files:/files`)
+  * **Transcripts**: `/data/transcripts/<user_id>/<recording_id>.{txt,srt,vtt,json}` (volume: `./data:/data`)
 	* These folders are already created here in the local project folder (/home/ben/SolWorkingFolder/CustomSoftware/transcriber)
 * (Optional) **tusd** (Tus resumable uploads) to handle long, robust uploads; n8n is triggered on upload completion.
 
@@ -174,16 +176,17 @@ Build a private, multi-user **transcriber system** that feels like one-tap "reco
 
 * `caddy` (reverse proxy)
 * `n8n`
-* `asr-gateway` (Faster-Whisper OpenAI-compatible server, GPU)
-* `whisperx-worker` (GPU)
+* `transcriber-asr-gateway` (Faster-Whisper OpenAI-compatible server, GPU)
+* `transcriber-whisperx-worker` (GPU)
 * `postgres`
 * `tusd` (optional, for resumable uploads)
 * `redis` (optional, for queues and job status pub/sub)
 
 **Volumes & Paths (bind mounts):**
 
-* `/data/audio/<user_id>/<recording_id>.{wav,flac,opus}`
-* `/data/transcripts/<user_id>/<recording_id>.{txt,srt,vtt,json}`
+* **Audio uploads**: `./local-files:/files` → `/files/<user_id>/<recording_id>.{wav,flac,mp3,m4a,opus}`
+* **Transcripts**: `./data:/data` → `/data/transcripts/<user_id>/<recording_id>.{txt,srt,vtt,json}`
+* **Database**: `./postgres-dbs:/var/lib/postgresql/data`
 * `/data/tmp` (tmpfs if desired for staging)
 
 **Postgres Schema (DDL sketch):**
@@ -228,7 +231,7 @@ create table transcripts (
 * Steps:
 
   1. Validate mode + auth; create `recordings` row with `status='queued'`.
-  2. Save uploaded file to `/data/audio/<user_id>/<recording_id>.flac` (or as received).
+  2. Save uploaded file to `/files/<user_id>/<recording_id>.flac` (or as received).
   3. Queue **Transcribe Job**: set `status='processing'` and invoke workflow B with payload (recording\_id, mode, paths).
   4. Respond `200 { job_id: <recording_id> }`.
 
@@ -238,11 +241,11 @@ create table transcripts (
 
   * **single**:
 
-    * Call `asr-gateway` (model `large-v3` by default) with file path.
+    * Call `transcriber-asr-gateway` (model `large-v3` by default) with file path.
     * Save outputs `.txt`, `.vtt`, `.srt`.
   * **multi**:
 
-    * Call `asr-gateway` (model `medium.en` or `large-v3`), then call `whisperx-worker` to align words + diarize speakers.
+    * Call `transcriber-asr-gateway` (model `medium.en` or `large-v3`), then call `transcriber-whisperx-worker` to align words + diarize speakers.
     * Save `.txt/.vtt/.srt` and `diarization.json` (segments with speaker labels).
 * Update `transcripts` and set `recordings.status='done'`, `transcript_ready=true`.
 * On error: `status='failed'` + error detail.
@@ -259,14 +262,14 @@ create table transcripts (
 
 * Return status + progress (if available) for polling.
 
-**asr-gateway (Faster-Whisper server)**
+**transcriber-asr-gateway (Faster-Whisper server)**
 
 * Must expose OpenAI-compatible `POST /v1/audio/transcriptions`:
 
   * Accept `model`, `file`, `language?`, `temperature?`, `prompt?`.
   * Return `{ text: "...", language: "en", segments: [...] }` if available.
 
-**whisperx-worker**
+**transcriber-whisperx-worker**
 
 * Accept CLI or HTTP to perform alignment + diarization given an existing transcript/audio; return diarization JSON and aligned words.
 * GPU-enabled container; can share model cache volume.
@@ -296,7 +299,7 @@ create table transcripts (
 * **Extensions**: prefer `.flac` (lossless, smaller) or `.wav` (PCM). Accept `.m4a`, `.mp3`, `.ogg`, `.opus`.
 * **Paths**:
 
-  * Audio: `/data/audio/<user_id>/<recording_id>.<ext>`
+  * Audio: `/files/<user_id>/<recording_id>.<ext>`
   * Transcripts: `/data/transcripts/<user_id>/<recording_id>.{txt,srt,vtt,json}`
 
 ---
@@ -481,9 +484,17 @@ create table transcripts (
 **AI Agent Collaboration:**
 - **GitHub Copilot**: Repository-specific instructions in `.github/copilot-instructions.md`
 - **Claude Code**: Access via GitHub integration or local permissions
-- **Context source**: Reference SystemsInfoRepo for infrastructure understanding the `docker-compose.yml`** whatever additional is needed for this: already have n8n, postgres,, will need asr-gateway, whisperx-worker, (optional tusd), volumes for `/data/audio` and `/data/transcripts`.
+- **Context source**: Reference SystemsInfoRepo for infrastructure understanding
+
+---
+
+## Tasks for agent (generate code & configs)
+
+1. **Scaffold `web/` PWA** with the UI elements above, platform detection helpers, history pages, and API client (fetch wrapper with Access JWT).
+2. **Help implement deep-link launchers** for iOS Shortcuts and Android Bridge; parameterize `name` and `mode`.
+3. **Add to the `docker-compose.yml`** whatever additional is needed for this: already have n8n, postgres, will need transcriber-asr-gateway, transcriber-whisperx-worker, (optional tusd), volumes for `/files/` and `/data/transcripts`.
 4. **Provide Caddy config** with reverse proxy routes, security headers, and `X-Robots-Tag: noindex`.
-5. **Export n8n workflows** for `/ingest`, `/api/recordings`, `/api/recordings/:id`, `/api/jobs/:id`, and the Transcribe Job; include HTTP Request nodes to ASR and WhisperX and file-write nodes.
+5. **Export n8n workflows** for `/ingest`, `/api/recordings`, `/api/recordings/:id`, `/api/jobs/:id`, and the Transcribe Job; include HTTP Request nodes to transcriber-asr-gateway and transcriber-whisperx-worker and file-write nodes.
 6. **Add `db/schema.sql`** for the tables above; include seed script to auto-create user rows on first request (look up by email).
 7. **Build `android-bridge/`** app with:
 

@@ -1,0 +1,271 @@
+{
+  "name": "Transcriber - With Complex JS",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "transcribe-with-complex-js",
+        "options": {}
+      },
+      "id": "webhook-transcribe-complex",
+      "name": "Transcribe Complex Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "transcribe-with-complex-js"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().body;\nconst recordingId = data.recordingId || 'test-123';\nconst audioPath = data.audioPath || '/tmp/test.wav';\n\nreturn {\n  recordingId,\n  audioPath\n};"
+      },
+      "id": "parse-complex-request",
+      "name": "Parse Complex Request", 
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "fileSelector": "={{ $json.audioPath }}"
+      },
+      "id": "read-complex-file",
+      "name": "Read Complex File",
+      "type": "n8n-nodes-base.readBinaryFiles",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://transcriber-asr-gateway:8000/v1/audio/transcriptions",
+        "options": {
+          "bodyContentType": "multipart-form-data",
+          "bodyParametersUi": {
+            "parameter": [
+              {
+                "name": "file",
+                "inputDataFieldName": "audioFile"
+              },
+              {
+                "name": "model",
+                "value": "large-v3"
+              },
+              {
+                "name": "response_format",
+                "value": "verbose_json"
+              },
+              {
+                "name": "temperature",
+                "value": "0"
+              }
+            ]
+          }
+        }
+      },
+      "id": "complex-transcribe",
+      "name": "Complex Transcribe",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst recordingId = $node[\"Parse Complex Request\"].json[\"recordingId\"];\n\n// Process transcript data\nconst segments = response.segments || [];\nconst duration = response.duration || 0;\n\n// Generate VTT format\nlet vttContent = 'WEBVTT\\n\\n';\nsegments.forEach((segment, index) => {\n  const startTime = formatTime(segment.start || 0);\n  const endTime = formatTime(segment.end || segment.start + 1);\n  vttContent += `${index + 1}\\n${startTime} --> ${endTime}\\n${segment.text?.trim() || ''}\\n\\n`;\n});\n\n// Generate SRT format\nlet srtContent = '';\nsegments.forEach((segment, index) => {\n  const startTime = formatSRTTime(segment.start || 0);\n  const endTime = formatSRTTime(segment.end || segment.start + 1);\n  srtContent += `${index + 1}\\n${startTime} --> ${endTime}\\n${segment.text?.trim() || ''}\\n\\n`;\n});\n\n// Helper functions\nfunction formatTime(seconds) {\n  const hours = Math.floor(seconds / 3600);\n  const minutes = Math.floor((seconds % 3600) / 60);\n  const secs = Math.floor(seconds % 60);\n  const ms = Math.floor((seconds % 1) * 1000);\n  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`;\n}\n\nfunction formatSRTTime(seconds) {\n  const hours = Math.floor(seconds / 3600);\n  const minutes = Math.floor((seconds % 3600) / 60);\n  const secs = Math.floor(seconds % 60);\n  const ms = Math.floor((seconds % 1) * 1000);\n  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')},${ms.toString().padStart(3, '0')}`;\n}\n\n// Return processed data\nreturn {\n  recordingId,\n  transcript: response.text || '',\n  vttContent,\n  srtContent,\n  duration,\n  segments: segments.length,\n  textPath: `/tmp/transcript-${recordingId}.txt`,\n  vttPath: `/tmp/transcript-${recordingId}.vtt`,\n  srtPath: `/tmp/transcript-${recordingId}.srt`\n};"
+      },
+      "id": "process-transcript",
+      "name": "Process Transcript",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileSelector": "={{ $json.textPath }}",
+        "dataPropertyName": "transcript"
+      },
+      "id": "write-txt-file",
+      "name": "Write TXT File",
+      "type": "n8n-nodes-base.readBinaryFiles",
+      "typeVersion": 1,
+      "position": [1340, 200]
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileSelector": "={{ $json.vttPath }}",
+        "dataPropertyName": "vttContent"
+      },
+      "id": "write-vtt-file",
+      "name": "Write VTT File",
+      "type": "n8n-nodes-base.readBinaryFiles",
+      "typeVersion": 1,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileSelector": "={{ $json.srtPath }}",
+        "dataPropertyName": "srtContent"
+      },
+      "id": "write-srt-file",
+      "name": "Write SRT File",
+      "type": "n8n-nodes-base.readBinaryFiles",
+      "typeVersion": 1,
+      "position": [1340, 400]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE transcriber.recordings SET status = $1, transcript_text = $2, vtt_path = $3, srt_path = $4, duration_seconds = $5 WHERE id = $6",
+        "additionalFields": {
+          "queryParameters": [
+            "={{ 'done' }}",
+            "={{ $json.transcript }}",
+            "={{ $json.vttPath }}",
+            "={{ $json.srtPath }}",
+            "={{ $json.duration }}",
+            "={{ $json.recordingId }}"
+          ]
+        }
+      },
+      "id": "update-complex-status",
+      "name": "Update Complex Status",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [1560, 300],
+      "credentials": {
+        "postgres": {
+          "id": "postgres_main",
+          "name": "PostgreSQL Main DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "respond-complex",
+      "name": "Respond Complex",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1780, 300]
+    }
+  ],
+  "connections": {
+    "Transcribe Complex Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Complex Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Complex Request": {
+      "main": [
+        [
+          {
+            "node": "Read Complex File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Complex File": {
+      "main": [
+        [
+          {
+            "node": "Complex Transcribe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Complex Transcribe": {
+      "main": [
+        [
+          {
+            "node": "Process Transcript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Transcript": {
+      "main": [
+        [
+          {
+            "node": "Write TXT File",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Write VTT File",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Write SRT File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write TXT File": {
+      "main": [
+        [
+          {
+            "node": "Update Complex Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write VTT File": {
+      "main": [
+        [
+          {
+            "node": "Update Complex Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write SRT File": {
+      "main": [
+        [
+          {
+            "node": "Update Complex Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Complex Status": {
+      "main": [
+        [
+          {
+            "node": "Respond Complex",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {},
+  "id": "transcriber-with-complex-js"
+}

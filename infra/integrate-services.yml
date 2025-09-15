@@ -1,0 +1,111 @@
+# Services to add to your main docker-compose.yml in /home/ben/SolWorkingFolder/docker-stack/
+# Copy these services into your main file under the 'services:' section
+
+  # TRANSCRIBER SYSTEM SERVICES START
+
+  # Web PWA frontend
+  transcriber-web:
+    build: /home/ben/SolWorkingFolder/CustomSoftware/transcriber/web
+    container_name: transcriber-web
+    restart: unless-stopped
+    ports:
+      - "3010:80"
+    networks:
+      - sol_default_network
+    environment:
+      - NODE_ENV=production
+
+  # Faster-Whisper ASR Gateway (OpenAI-compatible API)  
+  transcriber-asr-gateway:
+    image: fedirz/faster-whisper-server:latest
+    container_name: transcriber-asr-gateway
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    networks:
+      - sol_default_network
+    environment:
+      - MODEL_NAME=large-v3
+      - DEVICE=cuda
+      - COMPUTE_TYPE=float16
+      - HOST=0.0.0.0
+      - PORT=8000
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    volumes:
+      - transcriber_asr_models:/app/models
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # WhisperX worker for diarization and alignment
+  transcriber-whisperx-worker:
+    image: jimapp/whisperx:latest
+    container_name: transcriber-whisperx-worker  
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+    networks:
+      - sol_default_network
+    environment:
+      - WHISPERX_MODEL=large-v3
+      - DEVICE=cuda
+      - COMPUTE_TYPE=float16
+      - HF_TOKEN=${HUGGINGFACE_TOKEN:-}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    volumes:
+      - transcriber_whisperx_models:/root/.cache/huggingface
+      - /home/ben/SolWorkingFolder/CustomSoftware/transcriber/data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+  # Tusd resumable upload server
+  transcriber-tusd:
+    image: tusproject/tusd:latest
+    container_name: transcriber-tusd
+    restart: unless-stopped
+    ports:
+      - "1080:1080"
+    networks:
+      - sol_default_network
+    command: >
+      -host=0.0.0.0
+      -port=1080
+      -upload-dir=/data/uploads
+      -hooks-dir=/hooks
+      -hooks-http=http://n8n:5678/webhook/tus-upload-complete
+      -hooks-http-forward-headers=Authorization,CF-Access-Jwt-Assertion
+      -max-size=10737418240
+      -timeout=3600000
+    volumes:
+      - /home/ben/SolWorkingFolder/CustomSoftware/transcriber/data/uploads:/data/uploads
+      - /home/ben/SolWorkingFolder/CustomSoftware/transcriber/infra/tusd-hooks:/hooks:ro
+    depends_on:
+      - n8n
+
+  # TRANSCRIBER SYSTEM SERVICES END
+
+# Add these volumes to your main docker-compose.yml volumes section:
+#  transcriber_asr_models:
+#  transcriber_whisperx_models:
+
+# Add this to your .env file in docker-stack/:
+# HUGGINGFACE_TOKEN=your_huggingface_token_here
