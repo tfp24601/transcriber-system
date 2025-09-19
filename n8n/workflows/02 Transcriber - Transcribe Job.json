@@ -9,7 +9,7 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        0,
+        208,
         0
       ],
       "id": "ca262d4d-c7b8-490b-8eec-d54b50668ff4",
@@ -43,7 +43,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        416,
+        624,
         0
       ],
       "id": "c206d6b5-13ab-4ab3-b8eb-54cbee0d04c9",
@@ -51,12 +51,12 @@
     },
     {
       "parameters": {
-        "jsCode": "const data = $json;\nconst recordingId = data.recordingId;\nconst mode = data.mode;\nconst audioPath = data.audioPath;\n\nconsole.log('Received webhook data:', data);\nconsole.log('Extracted values:', { recordingId, mode, audioPath });\n\nreturn {\n  recordingId,\n  mode,\n  audioPath,\n  timestamp: new Date().toISOString()\n};\n"
+        "jsCode": "const data = $json.body;\nconst recordingId = data.recordingId;\nconst mode = data.mode;\nconst audioPath = data.audioPath;\n\nconsole.log('Received webhook data:', data);\nconsole.log('Extracted values:', { recordingId, mode, audioPath });\n\nreturn {\n  recordingId,\n  mode,\n  audioPath,\n  timestamp: new Date().toISOString()\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        208,
+        416,
         0
       ],
       "id": "59d83345-d752-44ab-9241-5de9b7ba3de5",
@@ -64,13 +64,13 @@
     },
     {
       "parameters": {
-        "fileSelector": "=/files/{{ $json.user_id }}/{{ $json.recording_id }}.{{ $json.file_extension }}",
+        "fileSelector": "={{ $node[\"Parse Job Data\"].json[\"audioPath\"] }}",
         "options": {}
       },
       "type": "n8n-nodes-base.readWriteFile",
       "typeVersion": 1,
       "position": [
-        624,
+        832,
         -96
       ],
       "id": "bc10d5a1-fb81-444a-a704-3077260bc14b",
@@ -78,13 +78,13 @@
     },
     {
       "parameters": {
-        "fileSelector": "=/files/{{ $json.user_id }}/{{ $json.recording_id }}.{{ $json.file_extension }}",
+        "fileSelector": "={{ $node[\"Parse Job Data\"].json[\"audioPath\"] }}",
         "options": {}
       },
       "type": "n8n-nodes-base.readWriteFile",
       "typeVersion": 1,
       "position": [
-        624,
+        832,
         64
       ],
       "id": "fbb8c13e-06f9-4117-b627-65b48655344a",
@@ -101,7 +101,7 @@
             {
               "parameterType": "formBinaryData",
               "name": "file",
-              "inputDataFieldName": "audioFile"
+              "inputDataFieldName": "data"
             },
             {
               "name": "model",
@@ -122,7 +122,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        832,
+        1040,
         -96
       ],
       "id": "9d5f2004-241c-41e9-8495-dc5eae3fe9d5",
@@ -139,7 +139,7 @@
             {
               "parameterType": "formBinaryData",
               "name": "file",
-              "inputDataFieldName": "audioFile"
+              "inputDataFieldName": "data"
             },
             {
               "name": "model",
@@ -160,7 +160,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        832,
+        1040,
         64
       ],
       "id": "69dbe23e-dd2f-4f2e-a792-c4ac9d0249c3",
@@ -177,7 +177,7 @@
             {
               "parameterType": "formBinaryData",
               "name": "file",
-              "inputDataFieldName": "audioFile"
+              "inputDataFieldName": "data"
             },
             {
               "name": "transcript_json",
@@ -198,7 +198,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1024,
+        1232,
         64
       ],
       "id": "fb8896d5-9c01-4e49-9064-8c3acaee1b03",
@@ -206,12 +206,12 @@
     },
     {
       "parameters": {
-        "jsCode": "// Process transcription result for single mode\nconst transcription = $input.first().json;\nconst recordingId = $node[\"Parse Job Data\"].json.recordingId;\nconst audioPath = $node[\"Parse Job Data\"].json.audioPath;\nconst userId = audioPath.split('/')[3]; // Extract from path\n\n// Prepare file paths\nconst transcriptDir = `/data/transcripts/${userId}`;\nconst textPath = `${transcriptDir}/${recordingId}.txt`;\nconst vttPath = `${transcriptDir}/${recordingId}.vtt`;\nconst srtPath = `${transcriptDir}/${recordingId}.srt`;\nconst jsonPath = `${transcriptDir}/${recordingId}.json`;\n\n// Extract text and metadata\nconst transcriptText = transcription.text || '';\nconst language = transcription.language || 'unknown';\nconst duration = transcription.duration || 0;\n\n// Generate VTT format\nlet vttContent = 'WEBVTT\\n\\n';\nif (transcription.segments) {\n  transcription.segments.forEach((segment, index) => {\n    const start = formatTime(segment.start);\n    const end = formatTime(segment.end);\n    vttContent += `${index + 1}\\n${start} --> ${end}\\n${segment.text.trim()}\\n\\n`;\n  });\n}\n\n// Generate SRT format\nlet srtContent = '';\nif (transcription.segments) {\n  transcription.segments.forEach((segment, index) => {\n    const start = formatSRTTime(segment.start);\n    const end = formatSRTTime(segment.end);\n    srtContent += `${index + 1}\\n${start} --> ${end}\\n${segment.text.trim()}\\n\\n`;\n  });\n}\n\nfunction formatTime(seconds) {\n  const hrs = Math.floor(seconds / 3600);\n  const mins = Math.floor((seconds % 3600) / 60);\n  const secs = (seconds % 60).toFixed(3);\n  return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.padStart(6, '0')}`;\n}\n\nfunction formatSRTTime(seconds) {\n  const hrs = Math.floor(seconds / 3600);\n  const mins = Math.floor((seconds % 3600) / 60);\n  const secs = (seconds % 60).toFixed(3).replace('.', ',');\n  return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.padStart(6, '0')}`;\n}\n\nreturn {\n  recordingId,\n  userId,\n  transcriptDir,\n  textPath,\n  vttPath,\n  srtPath,\n  jsonPath,\n  transcriptText,\n  vttContent,\n  srtContent,\n  jsonContent: JSON.stringify(transcription, null, 2),\n  language,\n  duration,\n  mode: 'single',\n  status: 'done',\n  completed_at: new Date().toISOString(),\n  processing_time_seconds: duration\n};"
+        "jsCode": "// Process transcription result for single mode\nconst transcription = $input.first().json;\nconst recordingId = $node[\"Parse Job Data\"].json.recordingId;\nconst audioPath = $node[\"Parse Job Data\"].json.audioPath;\nconst userId = audioPath.split('/')[3]; // Extract from path\n\n// Prepare file paths\nconst transcriptDir = `/data/transcripts/${userId}`;\nconst textPath = `${transcriptDir}/${recordingId}.txt`;\nconst vttPath = `${transcriptDir}/${recordingId}.vtt`;\nconst srtPath = `${transcriptDir}/${recordingId}.srt`;\nconst jsonPath = `${transcriptDir}/${recordingId}.json`;\n\n// Extract text and metadata\nconst transcriptText = transcription.text || '';\nconst language = transcription.language || 'unknown';\nconst duration = Math.round(transcription.duration || 0);\n\n// Generate VTT format\nlet vttContent = 'WEBVTT\\n\\n';\nif (transcription.segments) {\n  transcription.segments.forEach((segment, index) => {\n    const start = formatTime(segment.start);\n    const end = formatTime(segment.end);\n    vttContent += `${index + 1}\\n${start} --> ${end}\\n${segment.text.trim()}\\n\\n`;\n  });\n}\n\n// Generate SRT format\nlet srtContent = '';\nif (transcription.segments) {\n  transcription.segments.forEach((segment, index) => {\n    const start = formatSRTTime(segment.start);\n    const end = formatSRTTime(segment.end);\n    srtContent += `${index + 1}\\n${start} --> ${end}\\n${segment.text.trim()}\\n\\n`;\n  });\n}\n\nfunction formatTime(seconds) {\n  const hrs = Math.floor(seconds / 3600);\n  const mins = Math.floor((seconds % 3600) / 60);\n  const secs = (seconds % 60).toFixed(3);\n  return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.padStart(6, '0')}`;\n}\n\nfunction formatSRTTime(seconds) {\n  const hrs = Math.floor(seconds / 3600);\n  const mins = Math.floor((seconds % 3600) / 60);\n  const secs = (seconds % 60).toFixed(3).replace('.', ',');\n  return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.padStart(6, '0')}`;\n}\n\nreturn {\n  recordingId,\n  userId,\n  transcriptDir,\n  textPath,\n  vttPath,\n  srtPath,\n  jsonPath,\n  transcriptText,\n  vttContent,\n  srtContent,\n  jsonContent: JSON.stringify(transcription, null, 2),\n  language,\n  duration,\n  mode: 'single',\n  status: 'done',\n  completed_at: new Date().toISOString(),\n  processing_time_seconds: duration\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1136,
+        1344,
         -96
       ],
       "id": "a8dcdebd-0abb-47ae-b1f8-645b4cd2f6bf",
@@ -219,12 +219,12 @@
     },
     {
       "parameters": {
-        "jsCode": "// Use $json for the transcription result, generate your outputs here\nreturn {\n  transcriptText: '...',\n  vttContent: '...',\n  srtContent: '...',\n  jsonContent: '...',\n  transcriptDir: '/desired/path/for/transcripts',\n  textPath: '/desired/path/file.txt',\n  vttPath: '/desired/path/file.vtt',\n  srtPath: '/desired/path/file.srt',\n  jsonPath: '/desired/path/file.json'\n};\n"
+        "jsCode": "// Process diarization result for multi mode\nconst diarization = $input.first().json;\nconst recordingId = $node[\"Parse Job Data\"].json.recordingId;\nconst audioPath = $node[\"Parse Job Data\"].json.audioPath;\nconst userId = audioPath.split('/')[3]; // Extract from path\n\n// Prepare file paths\nconst transcriptDir = `/data/transcripts/${userId}`;\nconst textPath = `${transcriptDir}/${recordingId}.txt`;\nconst vttPath = `${transcriptDir}/${recordingId}.vtt`;\nconst srtPath = `${transcriptDir}/${recordingId}.srt`;\nconst jsonPath = `${transcriptDir}/${recordingId}.json`;\n\n// Extract text and metadata\nconst transcriptText = diarization.text || '';\nconst language = diarization.language || 'unknown';\nconst duration = diarization.duration || 0;\n\n// Generate VTT format with speaker labels\nlet vttContent = 'WEBVTT\\n\\n';\nif (diarization.segments) {\n  diarization.segments.forEach((segment, index) => {\n    const start = formatTime(segment.start);\n    const end = formatTime(segment.end);\n    const speaker = segment.speaker ? `[${segment.speaker}] ` : '';\n    vttContent += `${index + 1}\\n${start} --> ${end}\\n${speaker}${segment.text.trim()}\\n\\n`;\n  });\n}\n\n// Generate SRT format with speaker labels\nlet srtContent = '';\nif (diarization.segments) {\n  diarization.segments.forEach((segment, index) => {\n    const start = formatSRTTime(segment.start);\n    const end = formatSRTTime(segment.end);\n    const speaker = segment.speaker ? `[${segment.speaker}] ` : '';\n    srtContent += `${index + 1}\\n${start} --> ${end}\\n${speaker}${segment.text.trim()}\\n\\n`;\n  });\n}\n\nfunction formatTime(seconds) {\n  const hrs = Math.floor(seconds / 3600);\n  const mins = Math.floor((seconds % 3600) / 60);\n  const secs = (seconds % 60).toFixed(3);\n  return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.padStart(6, '0')}`;\n}\n\nfunction formatSRTTime(seconds) {\n  const hrs = Math.floor(seconds / 3600);\n  const mins = Math.floor((seconds % 3600) / 60);\n  const secs = (seconds % 60).toFixed(3).replace('.', ',');\n  return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.padStart(6, '0')}`;\n}\n\nreturn {\n  recordingId,\n  userId,\n  transcriptDir,\n  textPath,\n  vttPath,\n  srtPath,\n  jsonPath,\n  transcriptText,\n  vttContent,\n  srtContent,\n  jsonContent: JSON.stringify(diarization, null, 2),\n  language,\n  duration,\n  mode: 'multi',\n  status: 'done',\n  completed_at: new Date().toISOString(),\n  processing_time_seconds: duration\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1216,
+        1424,
         64
       ],
       "id": "42d9dc68-f3cb-4a5d-9705-9566955bd355",
@@ -237,24 +237,24 @@
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
-        1392,
+        1600,
         0
       ],
       "id": "ad539251-2661-4403-b723-9eba4af76999",
-      "name": "Create Transcript Dir"
+      "name": "Create Transcript Dir",
+      "alwaysOutputData": false
     },
     {
       "parameters": {
         "operation": "write",
-        "fileName": "={{ $json.textPath }}",
-        "dataPropertyName": "transcriptText",
+        "fileName": "textPath",
         "options": {}
       },
       "type": "n8n-nodes-base.readWriteFile",
       "typeVersion": 1,
       "position": [
-        1600,
-        0
+        2464,
+        -256
       ],
       "id": "006a41d9-7cb9-41c3-9ed1-de8e8d1a1a96",
       "name": "Write Text File"
@@ -262,15 +262,15 @@
     {
       "parameters": {
         "operation": "write",
-        "fileName": "={{ $json.vttPath }}",
-        "dataPropertyName": "vttContent",
+        "fileName": "vttPath",
+        "dataPropertyName": "vtt",
         "options": {}
       },
       "type": "n8n-nodes-base.readWriteFile",
       "typeVersion": 1,
       "position": [
-        1776,
-        0
+        2464,
+        -96
       ],
       "id": "504f17ce-6c4c-44ec-8401-f29d31941096",
       "name": "Write VTT File"
@@ -278,15 +278,17 @@
     {
       "parameters": {
         "operation": "write",
-        "fileName": "={{ $json.srtPath }}",
-        "dataPropertyName": "srtContent",
-        "options": {}
+        "fileName": "srtPath",
+        "dataPropertyName": "srt",
+        "options": {
+          "append": false
+        }
       },
       "type": "n8n-nodes-base.readWriteFile",
       "typeVersion": 1,
       "position": [
-        1952,
-        0
+        2464,
+        80
       ],
       "id": "41a4c5c9-6eb8-46fb-aef7-d20bdef120ac",
       "name": "Write SRT File"
@@ -294,15 +296,15 @@
     {
       "parameters": {
         "operation": "write",
-        "fileName": "={{ $json.jsonPath }}",
-        "dataPropertyName": "jsonContent",
+        "fileName": "jsonPath",
+        "dataPropertyName": "json",
         "options": {}
       },
       "type": "n8n-nodes-base.readWriteFile",
       "typeVersion": 1,
       "position": [
-        2128,
-        0
+        2464,
+        256
       ],
       "id": "27b399cf-2519-4650-a76e-d47a14a26bca",
       "name": "Write JSON File"
@@ -310,16 +312,16 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO transcriber.transcripts (recording_id, text_path, vtt_path, srt_path, words_json_path, language_detected, processing_time_seconds) \nVALUES ($1, $2, $3, $4, $5, $6, $7)",
+        "query": "INSERT INTO transcriber.transcripts (\n  recording_id, text_path, vtt_path, srt_path, words_json_path, language_detected, processing_time_seconds\n) VALUES (\n  $1, $2, $3, $4, $5, $6, $7\n)\n",
         "options": {
-          "queryReplacement": "=[\n  {{$json.recording_id}},\n  {{$json.textPath}},\n  {{$json.vttPath}},\n  {{$json.srtPath}},\n  {{$json.jsonPath}},\n  {{$json.language_detected}},\n  {{$json.processing_time_seconds}}\n]"
+          "queryReplacement": "={{ [\n  $json.recording_id,\n  $json.text_path,\n  $json.vtt_path,\n  $json.srt_path,\n  $json.words_json_path,\n  $json.language_detected,\n  $json.processing_time_seconds\n] }}"
         }
       },
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        2336,
-        0
+        3600,
+        16
       ],
       "id": "ec35a10b-603b-4163-8123-d24eeddbb85b",
       "name": "Save Transcript Record",
@@ -332,19 +334,332 @@
     },
     {
       "parameters": {
+        "operation": "toText",
+        "sourceProperty": "transcriptText",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        2288,
+        -256
+      ],
+      "id": "78268989-42fe-497d-9b66-1cd9ffbaa5b1",
+      "name": "Convert to File - textPath"
+    },
+    {
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "vttContent",
+        "binaryPropertyName": "vtt",
+        "options": {
+          "fileName": "file.vtt"
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        2288,
+        -96
+      ],
+      "id": "d0d8bb74-9d81-4f85-9706-53af41cacd24",
+      "name": "Convert to File - vttPath"
+    },
+    {
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "srtContent",
+        "binaryPropertyName": "srt",
+        "options": {
+          "fileName": "file.srt"
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        2288,
+        80
+      ],
+      "id": "3be49d53-35f1-46c2-87b9-6978a702ee36",
+      "name": "Convert to File - srtPath"
+    },
+    {
+      "parameters": {
+        "operation": "toJson",
+        "binaryPropertyName": "json",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        2288,
+        256
+      ],
+      "id": "3c46f8f6-00c9-4c65-8eed-ee385034659c",
+      "name": "Convert to File - jsonPath"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "numberInputs": 4,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        3136,
+        -16
+      ],
+      "id": "85d9c95c-ad93-4d53-bbc3-c6b3d57c60c1",
+      "name": "Merge file types"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1808,
+        0
+      ],
+      "id": "161b8fdd-e566-4d9d-a775-bdf263125a35",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "operation": "fromJson",
+        "binaryPropertyName": "json",
+        "destinationKey": "json",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        2672,
+        256
+      ],
+      "id": "86eacbad-30e2-4ff8-80db-6f38eeabd63d",
+      "name": "Extract from JSON File"
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "binaryPropertyName": "srt",
+        "destinationKey": "srt",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        2672,
+        80
+      ],
+      "id": "75850358-3148-44f2-ac14-23f622508f64",
+      "name": "Extract from SRT File"
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "binaryPropertyName": "vtt",
+        "destinationKey": "vtt",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        2672,
+        -96
+      ],
+      "id": "ed6d5d44-9e75-44da-b356-e9dc9ee80820",
+      "name": "Extract from VTT File"
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        2672,
+        -256
+      ],
+      "id": "0a184af5-aba9-4881-acb4-43e330bce030",
+      "name": "Extract from TXT File"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2cb78d36-9f9a-4e42-8e9c-4f8e4ce50683",
+              "name": "recording_id",
+              "value": "={{ $json.json[0].recordingId }}",
+              "type": "string"
+            },
+            {
+              "id": "a5f76150-fc48-4505-8484-046077e83858",
+              "name": "text_path",
+              "value": "={{ $json.json['0'].textPath }}",
+              "type": "string"
+            },
+            {
+              "id": "88d7ec54-f566-404c-962e-4cb8db33e92c",
+              "name": "vtt_path",
+              "value": "={{ $json.json['0'].vttPath }}",
+              "type": "string"
+            },
+            {
+              "id": "88e47841-9bd3-46bf-8e0b-2809ed88c431",
+              "name": "srt_path",
+              "value": "={{ $json.json['0'].srtPath }}",
+              "type": "string"
+            },
+            {
+              "id": "f649bf20-4f69-4686-8578-28110634a87f",
+              "name": "words_json_path",
+              "value": "={{ $json.json['0'].jsonPath }}",
+              "type": "string"
+            },
+            {
+              "id": "676925fc-2906-4841-8ae0-3a4427be37cb",
+              "name": "language_detected",
+              "value": "={{ $json.json['0'].language }}",
+              "type": "string"
+            },
+            {
+              "id": "a31bce8f-6feb-45c1-b840-02f67eb7d382",
+              "name": "processing_time_seconds",
+              "value": "={{ $json.json['0'].processing_time_seconds }}",
+              "type": "string"
+            },
+            {
+              "id": "0c935434-a7ee-49d8-8caa-81cfb6682b74",
+              "name": "status",
+              "value": "={{ $json.json['0'].status }}",
+              "type": "string"
+            },
+            {
+              "id": "1b0517b3-b53c-4652-9791-9a0252164994",
+              "name": "completed_at",
+              "value": "={{ $json.json['0'].completed_at }}",
+              "type": "string"
+            },
+            {
+              "id": "8db25eab-55c8-4585-b472-7cac786e1a64",
+              "name": "duration_seconds",
+              "value": "={{ $json.json['0'].duration }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3376,
+        16
+      ],
+      "id": "5dea56d1-c9f6-4f9f-8fb9-9de900cb5a66",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2cb78d36-9f9a-4e42-8e9c-4f8e4ce50683",
+              "name": "recording_id",
+              "value": "={{ $('Edit Fields').item.json.recording_id }}",
+              "type": "string"
+            },
+            {
+              "id": "343c27e7-720a-4a40-a896-19bba4b88e1d",
+              "name": "text_path",
+              "value": "={{ $('Edit Fields').item.json.text_path }}",
+              "type": "string"
+            },
+            {
+              "id": "88d7ec54-f566-404c-962e-4cb8db33e92c",
+              "name": "vtt_path",
+              "value": "={{ $('Edit Fields').item.json.vtt_path }}",
+              "type": "string"
+            },
+            {
+              "id": "88e47841-9bd3-46bf-8e0b-2809ed88c431",
+              "name": "srt_path",
+              "value": "={{ $('Edit Fields').item.json.srt_path }}",
+              "type": "string"
+            },
+            {
+              "id": "f649bf20-4f69-4686-8578-28110634a87f",
+              "name": "words_json_path",
+              "value": "={{ $('Edit Fields').item.json.words_json_path }}",
+              "type": "string"
+            },
+            {
+              "id": "676925fc-2906-4841-8ae0-3a4427be37cb",
+              "name": "language_detected",
+              "value": "={{ $('Edit Fields').item.json.language_detected }}",
+              "type": "string"
+            },
+            {
+              "id": "a31bce8f-6feb-45c1-b840-02f67eb7d382",
+              "name": "processing_time_seconds",
+              "value": "={{ $('Edit Fields').item.json.processing_time_seconds }}",
+              "type": "string"
+            },
+            {
+              "id": "0c935434-a7ee-49d8-8caa-81cfb6682b74",
+              "name": "status",
+              "value": "={{ $('Edit Fields').item.json.status }}",
+              "type": "string"
+            },
+            {
+              "id": "1b0517b3-b53c-4652-9791-9a0252164994",
+              "name": "completed_at",
+              "value": "={{ $('Edit Fields').item.json.completed_at }}",
+              "type": "string"
+            },
+            {
+              "id": "8db25eab-55c8-4585-b472-7cac786e1a64",
+              "name": "duration_seconds",
+              "value": "={{ $('Edit Fields').item.json.duration_seconds }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3824,
+        16
+      ],
+      "id": "581befd8-603d-4c33-bd13-34047464a136",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
         "operation": "executeQuery",
         "query": "UPDATE transcriber.recordings SET status = $1, completed_at = $2, duration_seconds = $3 WHERE id = $4",
         "options": {
-          "queryReplacement": "=[\n  {{$json.status}},\n  {{$json.completed_at}},\n  {{$json.duration_seconds}},\n  {{$json.recording_id}}\n]"
+          "queryReplacement": "=[\n  {{$json.status}},\n  {{$json.completed_at}},\n  {{($json.duration_seconds)}},\n  {{$json.recording_id}}\n]"
         }
       },
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        2544,
-        0
+        4032,
+        16
       ],
-      "id": "32eed9e0-c9b4-4e5a-b0fe-5c7db4c67322",
+      "id": "00752350-5c5a-423c-bc1a-852270c695d6",
       "name": "Execute a SQL query",
       "credentials": {
         "postgres": {
@@ -458,6 +773,11 @@
             "node": "Create Transcript Dir",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -477,9 +797,9 @@
       "main": [
         [
           {
-            "node": "Write Text File",
+            "node": "Merge",
             "type": "main",
-            "index": 0
+            "index": 1
           }
         ]
       ]
@@ -488,7 +808,7 @@
       "main": [
         [
           {
-            "node": "Write VTT File",
+            "node": "Extract from TXT File",
             "type": "main",
             "index": 0
           }
@@ -499,7 +819,7 @@
       "main": [
         [
           {
-            "node": "Write SRT File",
+            "node": "Extract from VTT File",
             "type": "main",
             "index": 0
           }
@@ -510,7 +830,7 @@
       "main": [
         [
           {
-            "node": "Write JSON File",
+            "node": "Extract from SRT File",
             "type": "main",
             "index": 0
           }
@@ -521,7 +841,7 @@
       "main": [
         [
           {
-            "node": "Save Transcript Record",
+            "node": "Extract from JSON File",
             "type": "main",
             "index": 0
           }
@@ -529,6 +849,153 @@
       ]
     },
     "Save Transcript Record": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File - textPath": {
+      "main": [
+        [
+          {
+            "node": "Write Text File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File - vttPath": {
+      "main": [
+        [
+          {
+            "node": "Write VTT File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File - srtPath": {
+      "main": [
+        [
+          {
+            "node": "Write SRT File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File - jsonPath": {
+      "main": [
+        [
+          {
+            "node": "Write JSON File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge file types": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Convert to File - textPath",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Convert to File - vttPath",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Convert to File - srtPath",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Convert to File - jsonPath",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from JSON File": {
+      "main": [
+        [
+          {
+            "node": "Merge file types",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Extract from SRT File": {
+      "main": [
+        [
+          {
+            "node": "Merge file types",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Extract from VTT File": {
+      "main": [
+        [
+          {
+            "node": "Merge file types",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Extract from TXT File": {
+      "main": [
+        [
+          {
+            "node": "Merge file types",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Save Transcript Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
       "main": [
         [
           {
@@ -544,7 +1011,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "ba2ce04e-37b8-4b27-b907-a95ff8cea5e1",
+  "versionId": "e49604d4-ce7f-45e1-a637-69d69ea41734",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "abfe09676dfbf795c9ccb50b58f5253d6d13f06369b5cd61be28c22aae4babbb"
