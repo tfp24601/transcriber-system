@@ -4,6 +4,7 @@
     {
       "parameters": {
         "path": "api/jobs/:jobId",
+        "responseMode": "lastNode",
         "options": {}
       },
       "type": "n8n-nodes-base.webhook",
@@ -18,7 +19,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const userEmail = $input.first().headers['cf-access-authenticated-user-email'] || 'test@solfamily.group';\nconst jobId = $input.first().params?.jobId;\nreturn {\n  userEmail,\n  jobId\n};\n"
+        "jsCode": "const userEmail = $input.first().headers['cf-access-authenticated-user-email'] || 'test@solfamily.group';\nconst jobId = $input.first().params?.jobId;\n\nconsole.log('User email:', userEmail);\nconsole.log('Job ID from params:', jobId);\n\nreturn {\n  userEmail,\n  jobId\n};\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -34,7 +35,7 @@
         "operation": "executeQuery",
         "query": "SELECT r.id, r.status, r.created_at, r.started_at, r.completed_at, r.error_message \nFROM transcriber.recordings r \nINNER JOIN transcriber.users u ON r.user_id = u.id \nWHERE u.email = $1 AND r.id = $2\n",
         "options": {
-          "queryReplacement": "={{ $node[\"Parse Job Request\"].json[\"userEmail\"] }}\n{{ $node[\"Parse Job Request\"].json[\"jobId\"] }}"
+          "queryReplacement": "={{ [\n  $node[\"Parse Job Request\"].json[\"userEmail\"],\n  $node[\"Parse Job Request\"].json[\"jobId\"]\n] }}"
         }
       },
       "type": "n8n-nodes-base.postgres",
@@ -87,7 +88,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const record = $json[0];\nlet progress = null;\n// Example: Calculate % complete\nif (record.status === 'completed') {\n  progress = 100;\n} else if (record.status === 'started') {\n  progress = 50;\n} else {\n  progress = 0;\n}\n\nreturn {\n  ...record,\n  progress\n};\n"
+        "jsCode": "const record = $json[0];\nlet progress = 0;\n\n// Calculate progress based on status\nif (record.status === 'done') {\n  progress = 1.0;\n} else if (record.status === 'processing') {\n  progress = 0.5; // Rough estimate\n} else if (record.status === 'failed') {\n  progress = 0;\n} else {\n  progress = 0; // queued\n}\n\nreturn {\n  id: record.id,\n  status: record.status,\n  progress: progress,\n  created_at: record.created_at,\n  started_at: record.started_at,\n  completed_at: record.completed_at,\n  error_message: record.error_message\n};\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
