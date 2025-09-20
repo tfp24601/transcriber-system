@@ -39,7 +39,7 @@
         "operation": "executeQuery",
         "query": "SELECT r.*, t.text_path, t.vtt_path, t.srt_path, t.words_json_path, t.diarization_json_path, t.language_detected, t.speaker_count\nFROM transcriber.recordings r\nINNER JOIN transcriber.users u ON r.user_id = u.id\nLEFT JOIN transcriber.transcripts t ON r.id = t.recording_id\nWHERE u.email = $1 AND r.id = $2\n",
         "options": {
-          "queryReplacement": "={{ $node[\"Parse Detail Request\"].json[\"userEmail\"] }} {{ $node[\"Parse Detail Request\"].json[\"recordingId\"] }}"
+          "queryReplacement": "={{ [\n  $node[\"Parse Detail Request\"].json[\"userEmail\"],\n  $node[\"Parse Detail Request\"].json[\"recordingId\"]\n] }}"
         }
       },
       "type": "n8n-nodes-base.postgres",
@@ -59,7 +59,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const userEmail = $input.first().headers['cf-access-authenticated-user-email'] || 'test@solfamily.group';\nconst recordingId = $input.first().params?.recordingId;\nreturn {\n  userEmail,\n  recordingId\n};\n"
+        "jsCode": "const userEmail = $input.first().headers['cf-access-authenticated-user-email'] || 'test@solfamily.group';\nconst recordingId = $input.first().params?.recordingId;\n\nconsole.log('User email:', userEmail);\nconsole.log('Recording ID from params:', recordingId);\n\nreturn {\n  userEmail,\n  recordingId\n};\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -69,21 +69,6 @@
       ],
       "id": "46ebd967-85d3-46bc-b4ce-a627ec395425",
       "name": "Parse Detail Request"
-    },
-    {
-      "parameters": {
-        "path": "api/recordings/:recordingId",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2.1,
-      "position": [
-        0,
-        0
-      ],
-      "id": "f47cb1bd-fc00-4a45-bdb7-e2112e0fbdf9",
-      "name": "Get Recording Detail API",
-      "webhookId": "1fa75f2a-03d3-4739-9399-37f73c1e974a"
     },
     {
       "parameters": {
@@ -129,6 +114,22 @@
       ],
       "id": "5e951e70-d0aa-4c24-a338-e79337611ca0",
       "name": "Respond Not Found"
+    },
+    {
+      "parameters": {
+        "path": "api/recordings/:recordingId",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "2f73247c-15ad-4d35-9c1d-1c2d6a9a7d9c",
+      "name": "Get Recording Detail API",
+      "webhookId": "e938fac8-a0f9-47b3-a706-92b5f6fa4e1d"
     }
   ],
   "pinData": {},
@@ -149,17 +150,6 @@
         [
           {
             "node": "Get Recording Detail",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Get Recording Detail API": {
-      "main": [
-        [
-          {
-            "node": "Parse Detail Request",
             "type": "main",
             "index": 0
           }
@@ -194,13 +184,24 @@
           }
         ]
       ]
+    },
+    "Get Recording Detail API": {
+      "main": [
+        [
+          {
+            "node": "Parse Detail Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "beee7fb2-0e68-49b7-969f-4d84490b055b",
+  "versionId": "cbe2832f-7231-4f8c-870f-491b75ffd243",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "abfe09676dfbf795c9ccb50b58f5253d6d13f06369b5cd61be28c22aae4babbb"

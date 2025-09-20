@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Transcriber API Test</title>
+</head>
+<body>
+    <h1>Transcriber API Test</h1>
+    <p>Open browser console and run the test script</p>
+    
+    <script>
+    // Test script based on Copilot's suggestion
+    async function testAPI() {
+        console.log('Testing transcriber API endpoints...');
+        
+        try {
+            // Test with a real recording ID from your database
+            console.log('1. Testing /api/recordings endpoint...');
+            const response = await fetch('/api/recordings', { 
+                headers: { 'cf-access-authenticated-user-email': 'test@solfamily.group' } 
+            });
+            
+            if (!response.ok) {
+                console.error('Recordings API failed:', response.status, response.statusText);
+                return;
+            }
+            
+            const data = await response.json();
+            console.log('Recordings:', data);
+            
+            if (data.items && data.items.length > 0) {
+                const recordingId = data.items[0].id;
+                console.log('Testing with recording ID:', recordingId);
+                
+                // Test recording detail
+                console.log('2. Testing /api/recordings/:id endpoint...');
+                try {
+                    const detailResponse = await fetch(`/api/recordings/${recordingId}`, { 
+                        headers: { 'cf-access-authenticated-user-email': 'test@solfamily.group' } 
+                    });
+                    
+                    if (detailResponse.ok) {
+                        const detailData = await detailResponse.json();
+                        console.log('Recording detail:', detailData);
+                    } else {
+                        console.error('Recording detail failed:', detailResponse.status, await detailResponse.text());
+                    }
+                } catch (e) {
+                    console.error('Recording detail error:', e);
+                }
+                
+                // Test job status  
+                console.log('3. Testing /api/jobs/:id endpoint...');
+                try {
+                    const jobResponse = await fetch(`/api/jobs/${recordingId}`, { 
+                        headers: { 'cf-access-authenticated-user-email': 'test@solfamily.group' } 
+                    });
+                    
+                    if (jobResponse.ok) {
+                        const jobData = await jobResponse.json();
+                        console.log('Job status:', jobData);
+                    } else {
+                        console.error('Job status failed:', jobResponse.status, await jobResponse.text());
+                    }
+                } catch (e) {
+                    console.error('Job status error:', e);
+                }
+            }
+        } catch (error) {
+            console.error('API test failed:', error);
+        }
+    }
+    
+    // Run test immediately
+    testAPI();
+    
+    // Also make it available globally
+    window.testAPI = testAPI;
+    </script>
+</body>
+</html>
