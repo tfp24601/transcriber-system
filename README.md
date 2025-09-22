@@ -23,7 +23,7 @@ A private, multi-user transcriber system that provides one-tap "record → send 
 - **Desktop**: File upload with optional local recording
 
 ### Server Infrastructure
-- **Authentication**: Cloudflare Access with email allowlist
+- **Authentication**: Development mode with query parameter fallback (Cloudflare Access planned)
 - **Reverse Proxy**: Caddy with security headers and routing
 - **Orchestration**: n8n workflows for ingest and processing
 - **Transcription**: Faster-Whisper (GPU) + WhisperX for diarization
@@ -32,8 +32,8 @@ A private, multi-user transcriber system that provides one-tap "record → send 
 
 ## 🛠 Technical Stack
 
-- **Frontend**: TypeScript + React/Vite or SvelteKit
-- **Mobile**: Kotlin (Android), iOS Shortcuts
+- **Frontend**: TypeScript + React/Vite (implemented)
+- **Mobile**: Kotlin (Android), iOS Shortcuts (planned)
 - **Backend**: n8n, Faster-Whisper, WhisperX
 - **Database**: PostgreSQL
 - **Infrastructure**: Docker Compose, Caddy, Cloudflared
@@ -62,8 +62,9 @@ A private, multi-user transcriber system that provides one-tap "record → send 
 
 - **Hardware**: GPU-enabled system (RTX 4090 recommended)
 - **Software**: Docker, Docker Compose
-- **Infrastructure**: Caddy reverse proxy, Cloudflare Access configured
+- **Infrastructure**: Caddy reverse proxy configured
 - **Domain**: `transcriber.solfamily.group` pointing to your infrastructure
+- **Note**: Cloudflare Access not yet configured (using dev auth)
 
 ### Development Setup
 
@@ -78,16 +79,20 @@ A private, multi-user transcriber system that provides one-tap "record → send 
    ./sync_online_repos_to_local.sh
    ```
 
-3. **Start services**:
+3. **Services are integrated in main Docker stack**:
+   All transcriber services are already integrated into the main stack at:
+   ```
+   /home/ben/SolWorkingFolder/docker-stack/docker-compose.yml
+   ```
+   
+   To restart transcriber services:
    ```bash
-   cd infra
-   docker-compose up -d
+   cd /home/ben/SolWorkingFolder/docker-stack
+   docker compose restart transcriber-web transcriber-asr-gateway transcriber-whisperx-worker transcriber-tusd
    ```
 
-4. **Initialize database**:
-   ```bash
-   docker-compose exec postgres psql -U transcriber -f /schema/init.sql
-   ```
+4. **Database is integrated with main PostgreSQL instance**:
+   Schema is already applied to the main PostgreSQL container.
 
 5. **Access web interface**:
    Navigate to `https://transcriber.solfamily.group`
@@ -153,21 +158,30 @@ This project is designed for collaborative development with AI agents:
 
 ## 🚦 Status
 
-**Current Phase**: ✅ **WORKING SYSTEM** - Ready for testing and use
-**Completion**: ~90% - Core transcription pipeline functional
+**Current Phase**: 🔧 **DEBUGGING** - Core system working, fixing transcript display
+**Completion**: ~85% - Transcription pipeline functional, frontend integration in progress
 
 ### ✅ **What's Working**
-- **Web Interface**: Deployed at `transcriber.solfamily.group` 
+
+- **Web Interface**: Deployed at `transcriber.solfamily.group`
 - **File Upload**: Multi-format audio upload with resumable transfers
 - **GPU Transcription**: RTX 4090 running Faster-Whisper large-v3 model
 - **Database Integration**: PostgreSQL with `transcriber` schema
-- **User Management**: Cloudflare Access authentication
-- **N8n Workflows**: File ingest and transcription orchestration active
+- **n8n Workflows**: File ingest and transcription orchestration active
+- **Recording History**: Frontend displays recordings with status
 
-### 🔧 **Next Steps** 
+### 🔧 **Currently Debugging**
+
+- **Transcript Display**: "Transcripts not yet available" despite successful processing
+- **Database Linking**: Verifying transcript records are properly associated with recordings
+- **API Response**: Ensuring transcript content reaches frontend
+
+### � **Next Steps**
+
+- Fix transcript display in frontend recording detail view
 - Mobile app integration (iOS Shortcuts, Android Bridge)
 - Multi-speaker diarization optimization
-- Advanced subtitle formatting options
+- Cloudflare Access authentication setup
 
 ---
 
