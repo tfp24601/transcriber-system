@@ -65,7 +65,7 @@
           "conditions": [
             {
               "id": "46530cbf-d943-4f4b-aea9-5e2338272114",
-              "leftValue": "={{ $json.length }}",
+              "leftValue": "={{ $items(\"Get Job Status\").length }}",
               "rightValue": 0,
               "operator": {
                 "type": "number",
@@ -201,7 +201,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "2ffcca2f-24a6-4445-bf4c-e9994b5659e8",
+  "versionId": "7b5c9829-45c9-451d-b563-89cccf5b560f",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "abfe09676dfbf795c9ccb50b58f5253d6d13f06369b5cd61be28c22aae4babbb"

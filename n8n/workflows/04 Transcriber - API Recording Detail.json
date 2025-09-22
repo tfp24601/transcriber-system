@@ -13,7 +13,7 @@
           "conditions": [
             {
               "id": "6e99e9d6-4133-46d0-8f4d-e4d333af57ce",
-              "leftValue": "={{ $json.length }}",
+              "leftValue": "={{ $items(\"Get Recording Detail\").length }}",
               "rightValue": 0,
               "operator": {
                 "type": "number",
@@ -59,7 +59,8 @@
     },
     {
       "parameters": {
-        "jsCode": "const userEmail = $input.first().headers['cf-access-authenticated-user-email'] || 'test@solfamily.group';\nconst recordingId = $input.first().params?.recordingId;\n\nconsole.log('User email:', userEmail);\nconsole.log('Recording ID from params:', recordingId);\n\nreturn {\n  userEmail,\n  recordingId\n};\n"
+        "mode": "runOnceForEachItem",
+        "jsCode": "const { headers = {}, params = {}, query = {} } = $json;\n\nconst userEmail =\n  headers['cf-access-authenticated-user-email'] ||\n  headers['x-dev-user-email'] ||\n  query.user_email || query.email ||\n  'test@solfamily.group';\n\nconst recordingId =\n  params.recordingId ||\n  query.recordingId || query.id;\n\nreturn { userEmail, recordingId };"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -72,7 +73,8 @@
     },
     {
       "parameters": {
-        "jsCode": "const record = $json[0];\n\n// Example: constructing download URLs and summary fields\nreturn {\n  id: record.id,\n  status: record.status,\n  textUrl: record.text_path ? `https://yourfileserver/${record.text_path}` : null,\n  vttUrl: record.vtt_path ? `https://yourfileserver/${record.vtt_path}` : null,\n  srtUrl: record.srt_path ? `https://yourfileserver/${record.srt_path}` : null,\n  wordsUrl: record.words_json_path ? `https://yourfileserver/${record.words_json_path}` : null,\n  diarizationUrl: record.diarization_json_path ? `https://yourfileserver/${record.diarization_json_path}` : null,\n  language: record.language_detected,\n  speakerCount: record.speaker_count,\n  createdAt: record.created_at,\n  completedAt: record.completed_at,\n  // Add any additional fields you want here\n};\n"
+        "mode": "runOnceForEachItem",
+        "jsCode": "const record = $json;\nconst base = 'https://transcriber.solfamily.group';\n\nreturn {\n  id: record.id,\n  name: record.name,\n  mode: record.mode,\n  created_at: record.created_at,\n  duration_seconds: record.duration_seconds ?? null,\n  status: record.status,\n\n  // Only include download URLs when we have something to link to\n  download_audio_url: record.id ? `${base}/downloads/audio/${record.id}` : null,\n  download_txt_url: record.text_path ? `${base}/downloads/txt/${record.id}` : null,\n  download_srt_url: record.srt_path ? `${base}/downloads/srt/${record.id}` : null,\n  download_vtt_url: record.vtt_path ? `${base}/downloads/vtt/${record.id}` : null,\n\n  language_detected: record.language_detected ?? null,\n  speaker_count: record.speaker_count ?? null,\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -201,7 +203,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "cbe2832f-7231-4f8c-870f-491b75ffd243",
+  "versionId": "06c4e518-4220-483d-86d2-315d77283206",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "abfe09676dfbf795c9ccb50b58f5253d6d13f06369b5cd61be28c22aae4babbb"

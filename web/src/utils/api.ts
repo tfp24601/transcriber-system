@@ -27,6 +27,11 @@ export interface ApiJob {
 }
 
 class ApiClient {
+  private devHeaders(): HeadersInit {
+    // Dev mode identity header so n8n sees a consistent user
+    // Remove when Cloudflare Access is configured
+    return { 'cf-access-authenticated-user-email': 'ben@solfamily.group' };
+  }
 
   async uploadFile(file: File, mode: 'single' | 'multi', name: string): Promise<string> {
     const formData = new FormData();
@@ -38,6 +43,7 @@ class ApiClient {
     const response = await fetch('/ingest', {
       method: 'POST',
       body: formData,
+      headers: this.devHeaders(),
     });
 
     if (!response.ok) {
@@ -49,7 +55,9 @@ class ApiClient {
   }
 
   async getRecordings(limit = 50): Promise<ApiRecordingsList> {
-    const response = await fetch(`/api/recordings?limit=${limit}`);
+    const response = await fetch(`/api/recordings?limit=${limit}`, {
+      headers: this.devHeaders(),
+    });
     
     if (!response.ok) {
       throw new Error(`Failed to fetch recordings: ${response.statusText}`);
@@ -59,12 +67,14 @@ class ApiClient {
   }
 
   async getRecording(id: string): Promise<ApiRecordingDetail> {
-    const response = await fetch(`/api/recordings/${id}`);
+    const response = await fetch(`/api/recordings/${id}`, {
+      headers: this.devHeaders(),
+    });
     if (!response.ok) {
       throw new Error(`Failed to fetch recording: ${response.statusText}`);
     }
 
-    const raw = await response.json();
+  const raw = await response.json();
 
     // Normalize keys between different backend variants
     const normalized: any = {
@@ -102,7 +112,7 @@ class ApiClient {
     // If transcript text is not inlined, try to fetch from provided URL
     if (!raw.transcript_text && normalized.download_txt_url) {
       try {
-        const txtResp = await fetch(normalized.download_txt_url);
+        const txtResp = await fetch(normalized.download_txt_url, { headers: this.devHeaders() });
         if (txtResp.ok) {
           normalized.transcript_text = await txtResp.text();
         }
@@ -117,7 +127,7 @@ class ApiClient {
     if (!normalized.diarization_json && (raw.diarizationUrl || raw.diarization_json_url)) {
       const dUrl = raw.diarizationUrl || raw.diarization_json_url;
       try {
-        const dResp = await fetch(dUrl);
+        const dResp = await fetch(dUrl, { headers: this.devHeaders() });
         if (dResp.ok) {
           normalized.diarization_json = await dResp.json();
         }
@@ -130,7 +140,9 @@ class ApiClient {
   }
 
   async getJob(id: string): Promise<ApiJob> {
-    const response = await fetch(`/api/jobs/${id}`);
+    const response = await fetch(`/api/jobs/${id}`, {
+      headers: this.devHeaders(),
+    });
     
     if (!response.ok) {
       throw new Error(`Failed to fetch job status: ${response.statusText}`);
