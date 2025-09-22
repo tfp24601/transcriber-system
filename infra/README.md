@@ -1,10 +1,12 @@
 # Infrastructure
 
-Docker Compose configurations and deployment files.
+Infrastructure configuration files and deployment helpers.
 
 **Contents:**
-- Docker Compose setup for all services
-- Caddy configuration snippets
-- Environment variable templates
+- Caddy configuration snippets for reverse proxy
+- Environment variable templates  
+- Service integration helpers
+- Upload hooks for tusd
 
-*To be implemented by AI agents following BuildSpec.md*
+**Note:** Transcriber services are integrated into the main Docker stack at:
+`/home/ben/SolWorkingFolder/docker-stack/docker-compose.yml`

@@ -60,7 +60,7 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const { headers = {}, params = {}, query = {} } = $json;\n\nconst userEmail =\n  headers['cf-access-authenticated-user-email'] ||\n  headers['x-dev-user-email'] ||\n  query.user_email || query.email ||\n  'test@solfamily.group';\n\nconst recordingId =\n  params.recordingId ||\n  query.recordingId || query.id;\n\nreturn { userEmail, recordingId };"
+        "jsCode": "// Debug: Log the full input to see structure\nconsole.log('Full webhook input:', JSON.stringify($json, null, 2));\n\nconst { headers = {}, params = {}, query = {}, queryParameters = {} } = $json;\n\n// Try multiple possible locations for query parameters\nconst userEmail =\n  headers['cf-access-authenticated-user-email'] ||\n  headers['x-dev-user-email'] ||\n  query.user_email || query.email ||\n  queryParameters.user_email || queryParameters.email ||\n  $json.user_email ||\n  'ben@solfamily.group'; // Changed default from test@ to ben@\n\nconst recordingId =\n  params.recordingId ||\n  query.recordingId || query.id ||\n  queryParameters.recordingId || queryParameters.id ||\n  $json.recordingId;\n\nconsole.log('Parsed userEmail:', userEmail);\nconsole.log('Parsed recordingId:', recordingId);\n\nreturn { userEmail, recordingId };"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,

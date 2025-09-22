@@ -28,9 +28,16 @@ export interface ApiJob {
 
 class ApiClient {
   private devHeaders(): HeadersInit {
-    // Dev mode identity header so n8n sees a consistent user
+    // In dev mode, we'll use query parameters instead of headers
+    // because Cloudflare strips client-supplied cf-* headers
+    return {};
+  }
+
+  private addDevParams(url: string): string {
+    // Dev mode identity via query parameter fallback
     // Remove when Cloudflare Access is configured
-    return { 'cf-access-authenticated-user-email': 'ben@solfamily.group' };
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}user_email=ben@solfamily.group`;
   }
 
   async uploadFile(file: File, mode: 'single' | 'multi', name: string): Promise<string> {
@@ -40,7 +47,8 @@ class ApiClient {
     formData.append('name', name);
     formData.append('source', 'web-desktop');
 
-    const response = await fetch('/ingest', {
+    const url = this.addDevParams('/ingest');
+    const response = await fetch(url, {
       method: 'POST',
       body: formData,
       headers: this.devHeaders(),
@@ -55,7 +63,8 @@ class ApiClient {
   }
 
   async getRecordings(limit = 50): Promise<ApiRecordingsList> {
-    const response = await fetch(`/api/recordings?limit=${limit}`, {
+    const url = this.addDevParams(`/api/recordings?limit=${limit}`);
+    const response = await fetch(url, {
       headers: this.devHeaders(),
     });
     
@@ -67,7 +76,8 @@ class ApiClient {
   }
 
   async getRecording(id: string): Promise<ApiRecordingDetail> {
-    const response = await fetch(`/api/recordings/${id}`, {
+    const url = this.addDevParams(`/api/recordings/${id}`);
+    const response = await fetch(url, {
       headers: this.devHeaders(),
     });
     if (!response.ok) {
@@ -112,7 +122,8 @@ class ApiClient {
     // If transcript text is not inlined, try to fetch from provided URL
     if (!raw.transcript_text && normalized.download_txt_url) {
       try {
-        const txtResp = await fetch(normalized.download_txt_url, { headers: this.devHeaders() });
+        const txtUrl = this.addDevParams(normalized.download_txt_url);
+        const txtResp = await fetch(txtUrl, { headers: this.devHeaders() });
         if (txtResp.ok) {
           normalized.transcript_text = await txtResp.text();
         }
@@ -127,7 +138,8 @@ class ApiClient {
     if (!normalized.diarization_json && (raw.diarizationUrl || raw.diarization_json_url)) {
       const dUrl = raw.diarizationUrl || raw.diarization_json_url;
       try {
-        const dResp = await fetch(dUrl, { headers: this.devHeaders() });
+        const diarizationUrl = this.addDevParams(dUrl);
+        const dResp = await fetch(diarizationUrl, { headers: this.devHeaders() });
         if (dResp.ok) {
           normalized.diarization_json = await dResp.json();
         }
@@ -140,7 +152,8 @@ class ApiClient {
   }
 
   async getJob(id: string): Promise<ApiJob> {
-    const response = await fetch(`/api/jobs/${id}`, {
+    const url = this.addDevParams(`/api/jobs/${id}`);
+    const response = await fetch(url, {
       headers: this.devHeaders(),
     });
     
