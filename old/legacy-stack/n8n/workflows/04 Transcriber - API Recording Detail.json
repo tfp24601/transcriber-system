@@ -73,13 +73,71 @@
     },
     {
       "parameters": {
+        "filePath": "={{ $item(0, 'Get Recording Detail').json.text_path }}"
+      },
+      "type": "n8n-nodes-base.readBinaryFile",
+      "typeVersion": 1,
+      "position": [
+        832,
+        -240
+      ],
+      "id": "0b2d3f0e-4f56-4dc1-9c2b-8f362e4bca2d",
+      "name": "Read Transcript File",
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "destinationKey": "transcript_text",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        1040,
+        -240
+      ],
+      "id": "7e9d965c-9f6f-42ba-92a1-51e8b5a7823e",
+      "name": "Extract Transcript Text"
+    },
+    {
+      "parameters": {
+        "filePath": "={{ $item(0, 'Get Recording Detail').json.diarization_json_path || $item(0, 'Get Recording Detail').json.words_json_path }}"
+      },
+      "type": "n8n-nodes-base.readBinaryFile",
+      "typeVersion": 1,
+      "position": [
+        1248,
+        -240
+      ],
+      "id": "6a54b8d0-3f2b-4b2a-9f5e-35f0c1aa5e97",
+      "name": "Read Diarization File",
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "fromJson",
+        "destinationKey": "diarization_json",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        1456,
+        -240
+      ],
+      "id": "8c176f3b-87dd-4f5c-9b5f-0b7c43d8c5a6",
+      "name": "Extract Diarization JSON"
+    },
+    {
+      "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const record = $json;\nconst base = 'https://transcriber.solfamily.group';\n\nreturn {\n  id: record.id,\n  name: record.name,\n  mode: record.mode,\n  created_at: record.created_at,\n  duration_seconds: record.duration_seconds ?? null,\n  status: record.status,\n\n  // Only include download URLs when we have something to link to\n  download_audio_url: record.id ? `${base}/downloads/audio/${record.id}` : null,\n  download_txt_url: record.text_path ? `${base}/downloads/txt/${record.id}` : null,\n  download_srt_url: record.srt_path ? `${base}/downloads/srt/${record.id}` : null,\n  download_vtt_url: record.vtt_path ? `${base}/downloads/vtt/${record.id}` : null,\n\n  language_detected: record.language_detected ?? null,\n  speaker_count: record.speaker_count ?? null,\n};"
+        "jsCode": "const record = $item(0, 'Get Recording Detail', 0)?.json ?? {};\nconst base = 'https://transcriber.solfamily.group';\n\nconst transcriptText = $json.transcript_text ?? null;\nlet diarizationJson = $json.diarization_json ?? null;\n\nif (typeof diarizationJson === 'string') {\n  try {\n    diarizationJson = JSON.parse(diarizationJson);\n  } catch (error) {\n    console.error('Failed to parse diarization json string', error.message);\n    diarizationJson = null;\n  }\n}\n\nreturn {\n  id: record.id,\n  name: record.name,\n  mode: record.mode,\n  created_at: record.created_at,\n  duration_seconds: record.duration_seconds ?? null,\n  status: record.status,\n  transcript_text: transcriptText,\n\n  // Only include download URLs when we have something to link to\n  download_audio_url: record.id ? `${base}/downloads/audio/${record.id}` : null,\n  download_txt_url: record.text_path ? `${base}/downloads/txt/${record.id}` : null,\n  download_srt_url: record.srt_path ? `${base}/downloads/srt/${record.id}` : null,\n  download_vtt_url: record.vtt_path ? `${base}/downloads/vtt/${record.id}` : null,\n\n  language_detected: record.language_detected ?? null,\n  speaker_count: record.speaker_count ?? null,\n  diarization_json: diarizationJson,\n  debug_record: record,\n  debug_current: $json\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        832,
+        1664,
         -96
       ],
       "id": "d7d2c10c-12b5-475a-b134-2d126c69a73a",
@@ -162,7 +220,7 @@
       "main": [
         [
           {
-            "node": "Build Detail Response",
+            "node": "Read Transcript File",
             "type": "main",
             "index": 0
           }
@@ -170,6 +228,50 @@
         [
           {
             "node": "Respond Not Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Transcript File": {
+      "main": [
+        [
+          {
+            "node": "Extract Transcript Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Transcript Text": {
+      "main": [
+        [
+          {
+            "node": "Read Diarization File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Diarization File": {
+      "main": [
+        [
+          {
+            "node": "Extract Diarization JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Diarization JSON": {
+      "main": [
+        [
+          {
+            "node": "Build Detail Response",
             "type": "main",
             "index": 0
           }
@@ -203,10 +305,9 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "06c4e518-4220-483d-86d2-315d77283206",
+  "versionId": "c0b36daa-b800-4e68-b4d4-c3b92dfd58e3",
   "meta": {
-    "templateCredsSetupCompleted": true,
-    "instanceId": "abfe09676dfbf795c9ccb50b58f5253d6d13f06369b5cd61be28c22aae4babbb"
+    "templateCredsSetupCompleted": true
   },
   "id": "jMdvnYl96IG4JzzV",
   "tags": []

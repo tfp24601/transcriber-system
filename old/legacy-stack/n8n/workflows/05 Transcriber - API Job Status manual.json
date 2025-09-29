@@ -19,7 +19,8 @@
     },
     {
       "parameters": {
-        "jsCode": "const userEmail = $input.first().headers['cf-access-authenticated-user-email'] || 'test@solfamily.group';\nconst jobId = $input.first().params?.jobId;\n\nconsole.log('User email:', userEmail);\nconsole.log('Job ID from params:', jobId);\n\nreturn {\n  userEmail,\n  jobId\n};\n"
+        "mode": "runOnceForEachItem",
+        "jsCode": "const { headers = {}, params = {}, query = {} } = $json;\n\nconst userEmail =\n  headers['cf-access-authenticated-user-email'] ||\n  headers['x-dev-user-email'] ||\n  query.user_email || query.email ||\n  'test@solfamily.group';\n\nconst jobId =\n  params.jobId ||\n  query.jobId || query.id;\n\nreturn { userEmail, jobId };"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -88,7 +89,8 @@
     },
     {
       "parameters": {
-        "jsCode": "const record = $json[0];\nlet progress = 0;\n\n// Calculate progress based on status\nif (record.status === 'done') {\n  progress = 1.0;\n} else if (record.status === 'processing') {\n  progress = 0.5; // Rough estimate\n} else if (record.status === 'failed') {\n  progress = 0;\n} else {\n  progress = 0; // queued\n}\n\nreturn {\n  id: record.id,\n  status: record.status,\n  progress: progress,\n  created_at: record.created_at,\n  started_at: record.started_at,\n  completed_at: record.completed_at,\n  error_message: record.error_message\n};\n"
+        "mode": "runOnceForEachItem",
+        "jsCode": "const record = $json;\n\n// Map status to a coarse progress\nlet progress = 0;\nif (record.status === 'done') {\n  progress = 1.0;\n} else if (record.status === 'processing') {\n  progress = 0.5;\n} else if (record.status === 'error' || record.status === 'failed') {\n  progress = 0;\n} else {\n  // queued or unknown\n  progress = 0;\n}\n\nreturn {\n  id: record.id,\n  status: record.status,\n  progress,\n  created_at: record.created_at ?? null,\n  started_at: record.started_at ?? null,\n  completed_at: record.completed_at ?? null,\n  error_message: record.error_message ?? null,\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -201,7 +203,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "7b5c9829-45c9-451d-b563-89cccf5b560f",
+  "versionId": "dd489cd9-49a7-45f5-82db-f033d259d8c3",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "abfe09676dfbf795c9ccb50b58f5253d6d13f06369b5cd61be28c22aae4babbb"

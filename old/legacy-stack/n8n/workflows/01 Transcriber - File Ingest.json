@@ -5,6 +5,7 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "ingest",
+        "responseMode": "lastNode",
         "options": {}
       },
       "id": "webhook-ingest",
@@ -383,7 +384,7 @@
   },
   "active": true,
   "settings": {},
-  "versionId": "e0f9600b-8abc-4dbd-be6f-c3d136b341a5",
+  "versionId": "5bd673d5-5b2a-42ea-8eb0-ba509ebb883f",
   "meta": {
     "instanceId": "abfe09676dfbf795c9ccb50b58f5253d6d13f06369b5cd61be28c22aae4babbb"
   },
