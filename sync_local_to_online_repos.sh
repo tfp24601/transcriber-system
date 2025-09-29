@@ -33,10 +33,16 @@ push_repo() {
         echo "➕ Adding changes (excluding data/ directory)..."
         git add --all
         git reset data/ 2>/dev/null || true  # Don't add audio/transcript data
-        
+
         if [ $? -ne 0 ]; then
             echo "❌ Failed to add changes in Transcriber System"
             return 1
+        fi
+
+        # Bail out if the add/reset cycle left nothing staged
+        if git diff --cached --quiet; then
+            echo "ℹ️  No staged changes after add/reset cycle"
+            return 0
         fi
         
         # Prompt for commit message if not provided
