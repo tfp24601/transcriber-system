@@ -1,110 +1,41 @@
-# Transcriber System .gitignore
-
-# Data directories (privacy - never commit audio or transcripts)
-data/audio/
-data/transcripts/
-*.wav
-*.flac
-*.mp3
-*.m4a
-*.ogg
-*.opus
-
-# Environment files
-.env
-.env.local
-.env.production
-*.key
-*.pem
-
-# Node.js dependencies
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-
-# Build outputs
-dist/
-build/
-.next/
-.nuxt/
-.vite/
-
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-desktop.ini
-
-# IDE files
-.vscode/settings.json
-.idea/
-*.swp
-*.swo
-*~
-
-# Logs
-logs/
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Docker volumes and temp files
-.docker/
-*.tmp
-*.temp
-
-# AI tools cache
-.claude/cache/
-.copilot/cache/
-
-# Database dumps and backups
-*.sql.backup
-*.dump
-db_backup/
-
-# Certificates and keys
-*.crt
-*.cert
-*.ca-bundle
-ssl/
-
-# Python cache (if we add Python scripts)
+# Python bytecode
 __pycache__/
 *.py[cod]
 *$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+.flaskenv
+.python-version
+
+# Dependency and build artifacts
+*.egg-info/
+*.egg
+build/
+dist/
 *.so
-.Python
-pip-log.txt
-pip-delete-this-directory.txt
 
-# Android build files
-android-bridge/build/
-android-bridge/.gradle/
-android-bridge/local.properties
-android-bridge/app/release/
+# Application runtime data
+flask-app/.venv/
+flask-app/__pycache__/
+flask-app/transcriptions/
+flask-app/static/js/*.map
+instance/
 
-# Temporary n8n exports
-n8n/temp/
-*.n8n.backup
+# Node / frontend
+node_modules/
+*.tsbuildinfo
 
-# Local development overrides
-docker-compose.override.yml
-.env.override
+# Editor and OS files
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
 
-# Transcription model caches
-models/
-*.model
-model_cache/
-
-# Large temporary files
-*.tar.gz
-*.zip
-*.rar
-uploads/temp/
+# Logs and local overrides
+*.log
+.env
+.env.*

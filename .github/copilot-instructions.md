@@ -1,188 +1,156 @@
-# Transcriber System - AI Agent Instructions
+# Transcriber Flask App – AI Agent Playbook
 
-## 🎯 Project Overview
+## 🎯 Quick Summary
 
-This is a **privacy-first, multi-user transcription system** that provides seamless recording and transcription across devices. The system is designed for AI agent collaboration and follows specific architectural patterns.
-
-## Do not use search
-
-The codebase search feature causes you to freeze. **Do not use search**.
-
-## 🚨 CRITICAL: Always Start with Sync
-
-**BEFORE ANY WORK:** Always run this command first:
-```bash
-cd /home/ben/SolWorkingFolder/CustomSoftware/transcriber
-./sync_online_repos_to_local.sh
-```
-
-**After completing work:** Always push changes with:
-```bash
-./sync_local_to_online_repos.sh
-```
-
-## 📋 System Context & Architecture
-
-### Infrastructure Context
-**ESSENTIAL:** Reference `tfp24601/SystemsInfoRepo` for complete system understanding:
-- **Sol workstation**: AMD Ryzen 9 7950X, RTX 4090 (24GB VRAM), 128GB RAM, Ubuntu 24.04.2
-- **Network**: Caddy reverse proxy + Cloudflared tunnels via Lunanode4 VPS
-- **Domain**: `transcriber.solfamily.group` (requires config updates on Lunanode4)
-- **Existing Docker stack**: `/home/ben/SolWorkingFolder/docker-stack/docker-compose.yml`
-
-### Key Architectural Decisions
-- **Privacy-first**: All transcription happens on local GPU, no cloud services
-- **Decoupled design**: Native recording apps + web orchestration interface
-- **Multi-user**: Cloudflare Access auth + per-user PostgreSQL records + file isolation
-- **Two modes**: 👤 Single-speaker (accuracy) vs 👥 Multi-speaker (diarization)
-- **Reliability**: Resumable uploads, background recording, idempotent processing
-
-## 🔧 Development Guidelines
-
-### Project Structure (monorepo)
-```
-/transcriber-system
-  /web           # PWA frontend (TypeScript + React/Vite or SvelteKit)
-  /android-bridge # Kotlin app for deep-link recording
-  /n8n           # Workflow exports + configs
-  /asr-gateway   # Faster-Whisper Docker setup
-  /whisperx      # WhisperX worker setup  
-  /infra         # docker-compose.yml, Caddy configs
-  /db            # PostgreSQL schema, migrations
-  /docs          # API.md, FLOWS.md, etc.
-  /data          # Local storage (audio/, transcripts/)
-```
-
-### Core Components to Implement
-
-1. **Web PWA (`/web`)**:
-   - Two main buttons: 👤 Single / 👥 Meeting
-   - Platform detection: iOS → Shortcuts, Android → deep link, Desktop → file upload
-   - History panel, transcript viewer, download capabilities
-   - Status polling for async transcription jobs
-
-2. **Backend Services** (integrate with existing Docker stack):
-   - **asr-gateway**: Faster-Whisper OpenAI-compatible server (GPU)
-   - **whisperx-worker**: Diarization and word-level alignment (GPU)
-   - **n8n workflows**: Ingest, processing orchestration, API endpoints
-   - **tusd**: Optional resumable upload server
-
-3. **Mobile Integration**:
-   - **Android Bridge**: Kotlin app with foreground service recording
-   - **iOS Shortcuts**: Native recording → upload → return to web
-
-4. **Database Schema**: Users, recordings, transcripts tables (see BuildSpec.md)
-
-### Technical Requirements
-
-#### GPU Utilization
-- **RTX 4090 available**: Use for Faster-Whisper large-v3 model
-- **CUDA FP16**: Optimize for speed and VRAM efficiency
-- **Model switching**: large-v3 for single-speaker, medium.en for multi-speaker
-
-#### Security & Auth
-- **Cloudflare Access**: JWT validation on all endpoints
-- **Per-user authorization**: Check user_id on every API call
-- **Signed URLs**: Time-limited download links
-- **No indexing**: `X-Robots-Tag: noindex` headers
-
-#### File Storage Patterns
-- **Audio**: `/data/audio/<user_id>/<recording_id>.{wav,flac}`
-- **Transcripts**: `/data/transcripts/<user_id>/<recording_id>.{txt,srt,vtt,json}`
-- **Naming**: Default format `YYYYMMDDHHMMSS` (local timezone)
-
-### Integration with Existing Infrastructure
-
-#### Docker Stack Extension
-**Current stack**: ✅ Integrated - n8n, postgres, GPU services all running
-**Docker Compose file**: `/home/ben/SolWorkingFolder/docker-stack/docker-compose.yml`
-**GPU Services**: 
-  - `transcriber-asr-gateway`: RTX 4090 Faster-Whisper (port 8002)
-  - `transcriber-whisperx-worker`: Multi-speaker support (port 8001)  
-**Volume mounts**: ✅ Active - `/data/audio` and `/data/transcripts` directories
-
-#### Caddy Configuration (Lunanode4)
-Agent cannot directly modify, but should generate config snippets for:
-- Route `/` → web app static files
-- Route `/api/*` → n8n webhook endpoints  
-- Route `/ingest` → upload endpoint
-- Route `/uploads/*` → tusd (if enabled)
-- Headers: security, no-index, CORS restrictions
-
-#### Cloudflared Setup (Lunanode4)
-Reference existing tunnel configuration in SystemsInfoRepo for domain routing patterns.
-
-## Important reference documents
-
-**Documentation on how to properly set the schema for n8n API changes**: /home/ben/SolWorkingFolder/CustomSoftware/transcriber/reference/n8n API uploads/openapi.yml
-**Where to find the n8n API code**: /home/ben/SolWorkingFolder/CustomSoftware/transcriber/docs/API.md
-
-## 🤖 AI Agent Workflow
-
-### When Building Components
-
-1. **Check 'Initial BuildSpec.md'**: Comprehensive technical specification with API contracts
-2. **Reference SystemsInfoRepo**: Infrastructure constraints and patterns
-3. **Follow existing patterns**: Match Docker stack, Caddy routing, security headers
-4. **GPU considerations**: Leverage RTX 4090 capabilities for real-time transcription
-5. **Privacy compliance**: Ensure no data leaves Ben's infrastructure
-
-### When Adding Features
-
-1. **Database changes**: Update schema.sql and provide migration scripts
-2. **API endpoints**: Document in `docs/API.md` with request/response examples
-3. **n8n workflows**: Export as JSON and provide import instructions
-4. **Mobile apps**: Consider both iOS Shortcuts and Android Bridge compatibility
-5. **Error handling**: Implement robust retry logic and user feedback
-
-### Testing Considerations
-
-- **Local development**: Use file upload initially before mobile integration
-- **GPU testing**: Verify models load and process faster-than-real-time
-- **Multi-user**: Test with multiple Cloudflare Access accounts
-- **Large files**: Validate resumable uploads work with 60+ minute recordings
-
-## 🔍 Key Files to Reference
-
-1. **BuildSpec.md**: Complete technical specification (ALWAYS READ FIRST)
-2. **SystemsInfoRepo**: Infrastructure context and existing configurations
-3. **`/home/ben/SolWorkingFolder/docker-stack/docker-compose.yml`**: Current Docker setup
-4. **Existing Caddy config**: See SystemsInfoRepo for routing patterns
-
-## ⚡ Performance Targets
-
-- **Transcription speed**: Faster than real-time on RTX 4090
-- **Upload handling**: Support multi-GB files via resumable uploads
-- **Real-time feedback**: Status updates every 3-5 seconds during processing
-- **Mobile UX**: One-tap recording with background safety
-
-## 🔒 Security Checklist
-
-- [ ] All endpoints behind Cloudflare Access
-- [ ] Per-user file isolation enforced
-- [ ] No direct file system access without auth
-- [ ] Signed URLs for downloads with TTL
-- [ ] CORS restricted to transcriber domain
-- [ ] No indexing meta tags and headers
-- [ ] Audit logging for file access
-
-## 🚀 Development Priorities
-
-### ✅ **COMPLETED PHASES:**
-1. **Phase 1**: ✅ Web PWA with file upload transcription
-2. **Phase 2**: ✅ N8n workflows and GPU transcription services  
-3. **Phase 2.5**: ✅ Database integration with `transcriber` schema
-4. **Phase 2.6**: ✅ RTX 4090 GPU integration with Faster-Whisper
-
-### 🔧 **CURRENT PRIORITIES:**
-1. **Phase 3**: iOS Shortcuts integration
-2. **Phase 4**: Android Bridge app  
-3. **Phase 5**: Multi-speaker diarization optimization
-4. **Phase 6**: Advanced subtitle features and mobile apps
+The active product is the **GPU-accelerated Flask transcription app** in `flask-app/`. All legacy services (PWA, n8n workflows, Docker stack, etc.) were archived to `old/legacy-stack/` on 2025-09-29; treat them as read-only historians unless a task explicitly says to revive or reference them. Every change, test, and deployment plan should focus on the Flask codebase.
 
 ---
 
-**Remember**: This is a privacy-focused system. Every design decision should prioritize keeping data on Ben's infrastructure while maintaining excellent user experience across all platforms.
+## 🚨 Critical Guardrails
+
+- **No VS Code search**: Built-in search freezes the session. Use terminal tools (`grep`, `rg`, `find`) instead.
+- **Stay in the active tree**: Touch `flask-app/` (and supporting docs) only. Do not modify anything under `old/legacy-stack/` unless the user says so.
+
+---
+
+## 📁 Current Layout
+
+```
+transcriber/
+  flask-app/
+    app.py                # Flask entrypoint + Faster-Whisper integration
+    requirements.txt      # Flask + faster-whisper + numpy
+    templates/            # HTML UI
+    static/               # CSS/JS assets
+    transcriptions/       # Output files (TXT/SRT)
+    README.md             # Local quick-start
+    .venv/                # Python 3.12 virtualenv (preferred interpreter)
+  docs/
+    gpu-acceleration-milestone.md  # Notes on enabling GPU + testing
+  old/
+    legacy-stack/         # Archived monorepo (PWA, n8n, Docker, etc.)
+```
+
+---
+
+## 🛠️ Day-to-Day Workflow
+
+1. **Activate the virtualenv**
+   ```bash
+   cd /home/ben/SolWorkingFolder/CustomSoftware/transcriber/flask-app
+   source .venv/bin/activate
+   ```
+
+2. **Launch the server (GPU-enabled)**
+   ```bash
+   LD_DIR="$PWD/.venv/lib/python3.12/site-packages/nvidia/cudnn/lib"
+   nohup env \
+     LD_LIBRARY_PATH="$LD_DIR:${LD_LIBRARY_PATH:-}" \
+     CT2_USE_CUDNN=1 \
+     WHISPER_DEFAULT_USE_GPU=true \
+     WHISPER_DEVICE=cuda \
+     WHISPER_GPU_DEVICE=cuda \
+     WHISPER_GPU_COMPUTE_TYPE=float16 \
+     WHISPER_CPU_COMPUTE_TYPE=float32 \
+     WHISPER_VAD=true \
+     PATH="$PWD/.venv/bin:$PATH" \
+     "$PWD/.venv/bin/python" app.py >/tmp/transcriber-flask.log 2>&1 &
+   ```
+
+3. **Stop the server**
+   ```bash
+   pkill -f "flask-app/.venv/bin/python app.py"
+   ```
+
+4. **Check status/logs**
+   ```bash
+   tail -n 20 /tmp/transcriber-flask.log
+   ```
+
+5. **Smoke-test GPU path**
+   ```bash
+   curl -s -X POST http://127.0.0.1:5000/transcribe \
+     -F "audio=@/tmp/test-tone.wav" \
+     -F "use_gpu=true" \
+     -F "model=small" \
+     -F "language=auto"
+   ```
+   Expect `"device": "cuda"` and `"gpu_used": true` in the JSON response.
+
+> Legacy sync scripts (`sync_online_repos_to_local.sh`, `sync_local_to_online_repos.sh`) live in the archive. Use standard git unless a task explicitly revives them.
+
+---
+
+## 🌐 Deployment Objectives
+
+- Serve the Flask UI at `https://transcriber.solfamily.group` via Caddy + Cloudflared.
+- Replace the legacy backend currently mapped behind that domain with this Flask service when production-ready.
+- Keep the GPU runtime (cuDNN 9, CUDA 12.4) available on the host; reuse the same environment variables as the local run.
+- Future idea: surface buttons/endpoints that trigger n8n workflows (e.g., “Polish this as an email”). Design hooks but do not depend on archived workflows until instructed.
+
+---
+
+## 🔍 Key Files & References
+
+| Path | Why it matters |
+| --- | --- |
+| `flask-app/app.py` | Whisper model loading, cuDNN detection, request handling |
+| `flask-app/templates/index.html` | UI for uploads + options |
+| `flask-app/static/` | Styling/scripts used by the UI |
+| `flask-app/requirements.txt` | Dependency pinning |
+| `docs/gpu-acceleration-milestone.md` | What changed to enable GPU + validation steps |
+| `old/legacy-stack/` | Historical code for reference only |
+| `docs/API.md` | n8n API code location |
+
+External references:
+- SystemsInfoRepo (hardware, networking, reverse proxy patterns)
+- **Existing Docker stack**: `/home/ben/SolWorkingFolder/docker-stack/docker-compose.yml`
+- Archived docs in `old/legacy-stack/docs/` when historical context is needed
+
+---
+
+## ✅ Definition of Done (Flask tasks)
+
+A change is complete when:
+- The Flask service runs without errors (log is clean).
+- GPU metadata shows `gpu_used: true` when requested with `use_gpu=true`.
+- The UI remains clear and functional (no heavy dependencies unless required).
+- Documentation reflects user-facing or operational changes.
+- Archived stack remains untouched (or intentional edits are clearly documented).
+
+---
+
+## 🧭 Roadmap Reminders (Future, not current work)
+
+1. **Reverse proxy rollout** – prepare Caddy/Cloudflared configs for production deployment.
+2. **n8n workflow buttons** – add endpoints or UI hooks to trigger future AI post-processing.
+3. **Service automation** – convert the nohup command into a managed service (systemd).
+4. **UX improvements** – better status messaging, transcript previews, optional auth.
+
+Update this playbook as those initiatives go live.
+
+---
+
+## 🧪 Testing Checklist
+
+- Upload short WAV/MP3 → transcript returns quickly with GPU metadata.
+- Toggle GPU option in UI → CPU fallback still works.
+- Verify files saved in `transcriptions/` (TXT + SRT).
+- Review `/tmp/transcriber-flask.log` for cuDNN/CUDA warnings.
+- Optional: Stress-test with longer recordings to confirm stability on RTX 4090.
+
+---
+
+## 🤖 Guidance for AI Agents
+
+- Clarify assumptions about legacy components. Ask before touching `old/legacy-stack/`.
+- Prefer enhancing existing Flask code instead of introducing new frameworks.
+- Provide configuration snippets (e.g., Caddy) rather than applying them directly.
+- Keep explanations user-friendly; the maintainer expects pragmatic, no-jargon guidance.
+
+---
+
+**TL;DR:** Work inside `flask-app/`, keep GPU inference running, prep for Caddy deployment, and treat the archived monorepo as read-only history.
 
 ## 🔌 n8n API Integration Guide
 

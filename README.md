@@ -1,200 +1,136 @@
-# Transcriber System
+# Flask Whisper Transcriber
 
-A private, multi-user transcriber system that provides one-tap "record → send → read transcript" functionality on phones and desktop, with privacy-first design and decoupled architecture.
+Welcome! This repository centers on the **GPU-accelerated Flask transcription app** located in `flask-app/`. All prior implementations (PWA, n8n workflows, Docker stack, etc.) have been archived under `old/legacy-stack/` and are kept for historical reference only. New contributors and AI agents should focus exclusively on the Flask code unless instructed otherwise.
 
-## 🎯 Overview
+> 🔎 **First step for any new agent:** Review `.github/copilot-instructions.md`. It contains up-to-date guardrails, workflow expectations, and deployment goals tailored to this Flask app.
 
-**Privacy-first transcription system** that keeps recording and transcription decoupled for reliability. Phones use native capture for screen-off recording, then upload to a web app which orchestrates transcription on your home server. No third-party cloud services - all audio stays on your infrastructure.
+## Repository layout
 
-### Key Features
+| Path | Purpose |
+| --- | --- |
+| `flask-app/` | Active Flask project (app code, templates, static assets, virtualenv). |
+| `docs/gpu-acceleration-milestone.md` | Milestone notes describing the September 2025 GPU enablement work and validation steps. |
+| `old/legacy-stack/` | Archived monorepo with the deprecated PWA/n8n/Docker implementation—treat as read-only unless explicitly revived. |
+| `docs/` (other files) | Additional documentation supporting the Flask app. |
 
-- **🔒 Privacy-first**: No third-party clouds; audio stored on Sol workstation
-- **📱 Multi-platform**: Native recording on iOS/Android, web interface for all platforms
-- **👤👥 Dual modes**: Single-speaker (highest accuracy) and multi-speaker (with diarization)
-- **🔄 Reliable**: Resumable uploads, background-safe recording, idempotent jobs
-- **👥 Multi-user**: Simple auth via Cloudflare Access, per-user storage and history
+If you need a refresher on the legacy architecture, browse `old/legacy-stack/`, but do not modify it.
 
-## 🏗 Architecture
+A lightweight Flask application that lets you upload or record audio directly in the browser and obtain a transcript using [faster-whisper](https://github.com/guillaumekln/faster-whisper).
 
-### Client Applications
-- **Web PWA**: Main interface at `transcriber.solfamily.group`
-- **iOS**: Native recording via Shortcuts app integration
-- **Android**: Custom "Recorder Bridge" app with deep linking
-- **Desktop**: File upload with optional local recording
+The server exposes a minimal web UI (served from `/`) and a JSON transcription endpoint at `/transcribe`. Transcripts and SRT caption files are stored locally so you can download them later.
 
-### Server Infrastructure
-- **Authentication**: Development mode with query parameter fallback (Cloudflare Access planned)
-- **Reverse Proxy**: Caddy with security headers and routing
-- **Orchestration**: n8n workflows for ingest and processing
-- **Transcription**: Faster-Whisper (GPU) + WhisperX for diarization
-- **Storage**: Postgres for metadata, local filesystem for audio/transcripts
-- **Uploads**: Optional Tus resumable upload server
+## Onboarding checklist for fresh agents
 
-## 🛠 Technical Stack
+1. Read `.github/copilot-instructions.md` for project guardrails and daily workflow.
+2. Skim `docs/gpu-acceleration-milestone.md` to understand the current environment (cuDNN 9, CUDA 12.4, RTX 4090).
+3. Confirm you can run the local server using the virtual environment inside `flask-app/` (instructions below).
+4. Verify GPU operation by calling `/transcribe` with `use_gpu=true` and checking for `"gpu_used": true` in the response.
+5. Avoid legacy sync scripts unless a task explicitly reintroduces them; use standard git workflows instead.
 
-- **Frontend**: TypeScript + React/Vite (implemented)
-- **Mobile**: Kotlin (Android), iOS Shortcuts (planned)
-- **Backend**: n8n, Faster-Whisper, WhisperX
-- **Database**: PostgreSQL
-- **Infrastructure**: Docker Compose, Caddy, Cloudflared
-- **GPU**: RTX 4090 for real-time transcription
+## Features
 
-## 📁 Project Structure
+- Upload existing audio files (`.mp3`, `.wav`, etc.)
+- Record audio in the browser via the MediaRecorder API (Chrome, Edge, Firefox)
+- Configure Whisper options (language, translation toggle, beam size, temperature, GPU toggle)
+- Switch Whisper models on the fly from the UI (tiny → large)
+- Download generated `.txt` and `.srt` files
+- CPU-friendly defaults with optional GPU / custom model configuration via environment variables
 
-```
-/transcriber-system
-  /web                 # PWA frontend
-  /android-bridge      # Android recording app
-  /n8n                 # Workflow exports and configs
-  /asr-gateway         # Faster-Whisper server setup
-  /whisperx            # WhisperX worker setup
-  /infra               # Docker Compose, Caddy configs
-  /db                  # Database schema and migrations
-  /docs                # API documentation and flows
-  /data                # Local data directories (audio/transcripts)
-    /audio             # Per-user audio files
-    /transcripts       # Generated transcripts and metadata
+## Prerequisites
+
+- Python 3.10+
+- `ffmpeg` available on your system (required by faster-whisper for certain formats)
+- Optional: NVIDIA GPU with the appropriate drivers and CUDA libraries if you want GPU inference
+
+## Quick start
+
+```bash
+cd /home/ben/SolWorkingFolder/CustomSoftware/transcriber/flask-app
+python -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+python app.py
 ```
 
-## 🚀 Quick Start
+The server listens on <http://0.0.0.0:5000> by default. Open <http://localhost:5000> in your browser, record or upload audio, tweak the options, and click **Transcribe**.
 
-### Prerequisites
+## Configuration
 
-- **Hardware**: GPU-enabled system (RTX 4090 recommended)
-- **Software**: Docker, Docker Compose
-- **Infrastructure**: Caddy reverse proxy configured
-- **Domain**: `transcriber.solfamily.group` pointing to your infrastructure
-- **Note**: Cloudflare Access not yet configured (using dev auth)
+All configuration is handled through environment variables so you can tweak behaviour without editing the code:
 
-### Development Setup
+| Variable | Description | Default |
+| --- | --- | --- |
+| `WHISPER_MODEL` | Default faster-whisper model (`tiny`, `base`, `small`, `medium`, `large-v3`, custom path). | `small` |
+| `WHISPER_AVAILABLE_MODELS` | Comma-separated list of models exposed in the UI dropdown. | `tiny,base,small,medium,large-v2` |
+| `WHISPER_DEVICE` | Legacy default inference device (`cpu`, `cuda`, `auto`). | `cpu` |
+| `WHISPER_COMPUTE_TYPE` | Legacy compute precision (`float32`, `float16`, etc.). | `float32` |
+| `WHISPER_DEFAULT_USE_GPU` | Set `true`/`false`/`auto` for the UI checkbox default. | `auto` (true if GPU configured) |
+| `WHISPER_GPU_DEVICE` | Device string used when GPU is enabled. | `cuda` |
+| `WHISPER_GPU_COMPUTE_TYPE` | Compute precision when GPU is enabled. | `float16` |
+| `WHISPER_CPU_DEVICE` | Device string used when GPU toggle is off. | `cpu` |
+| `WHISPER_CPU_COMPUTE_TYPE` | Compute precision when GPU toggle is off. | `float32` |
+| `WHISPER_VAD` | Whether to enable the built-in VAD filter (`true`/`false`). | `true` |
+| `WHISPER_BEAM_SIZE` | Default beam size shown in the UI. | `5` |
+| `WHISPER_TEMPERATURE` | Default temperature shown in the UI. | `0.0` |
+| `WHISPER_DEFAULT_LANGUAGE` | Preselected language option in the UI (`auto`, `en`, `es`, …). | `auto` |
+| `TRANSCRIPTION_OUTPUT_DIR` | Directory where transcripts/SRTs are stored. | `./transcriptions` |
+| `FLASK_HOST` | Host interface for the server. | `0.0.0.0` |
+| `FLASK_PORT` | Port for the server. | `5000` |
+| `FLASK_DEBUG` | Enable Flask debug reloading (`true`/`false`). | `false` |
 
-1. **Clone repository**:
-   ```bash
-   git clone https://github.com/tfp24601/transcriber-system.git
-   cd transcriber-system
-   ```
+Export the variables before launching the app, e.g.:
 
-2. **Sync latest changes**:
-   ```bash
-   ./sync_online_repos_to_local.sh
-   ```
+```bash
+export WHISPER_MODEL=large-v2
+export WHISPER_DEFAULT_USE_GPU=true
+export WHISPER_GPU_DEVICE=cuda
+export WHISPER_GPU_COMPUTE_TYPE=float16
+export WHISPER_CPU_COMPUTE_TYPE=float32
+python app.py
+```
 
-3. **Services are integrated in main Docker stack**:
-   All transcriber services are already integrated into the main stack at:
-   ```
-   /home/ben/SolWorkingFolder/docker-stack/docker-compose.yml
-   ```
-   
-   To restart transcriber services:
-   ```bash
-   cd /home/ben/SolWorkingFolder/docker-stack
-   docker compose restart transcriber-web transcriber-asr-gateway transcriber-whisperx-worker transcriber-tusd
-   ```
+## API usage
 
-4. **Database is integrated with main PostgreSQL instance**:
-   Schema is already applied to the main PostgreSQL container.
+You can also use the `/transcribe` endpoint programmatically by POSTing `multipart/form-data`:
 
-5. **Access web interface**:
-   Navigate to `https://transcriber.solfamily.group`
+- `audio` (file): Audio binary
+- `model` (string): Model name to load (`tiny`, `base`, etc.)
+- `language` (string): Language code or `auto`
+- `translate` (bool / string): `true` to translate to English
+- `temperature` (float)
+- `beam_size` (int)
+- `use_gpu` (bool / string): `true` to run on the GPU (falls back to CPU if unavailable)
 
-## 📖 Documentation
+The response includes:
 
-- **[Build Specification](BuildSpec.md)**: Complete technical specification
-- **[API Documentation](docs/API.md)**: REST API endpoints and contracts
-- **[User Flows](docs/FLOWS.md)**: Step-by-step user interaction flows
-- **[Infrastructure Setup](docs/INFRASTRUCTURE.md)**: Caddy and Cloudflare configuration
+```json
+{
+  "transcript": "...",
+  "metadata": {
+    "model": "small",
+  "device": "cuda",
+  "compute_type": "float16",
+  "gpu_requested": true,
+  "gpu_used": true,
+    "detected_language": "en",
+    "language_probability": 0.98,
+    "duration": 4.23,
+    "temperature": 0,
+    "beam_size": 5,
+    "task": "transcribe"
+  },
+  "downloads": {
+    "text": "http://localhost:5000/download/20250924-123456_sample.txt",
+    "srt": "http://localhost:5000/download/20250924-123456_sample.srt"
+  }
+}
+```
 
-## 🔧 System Context
+## Notes
 
-This project integrates with Ben's broader self-hosting infrastructure. For complete system context:
-
-**Reference Repository**: [tfp24601/SystemsInfoRepo](https://github.com/tfp24601/SystemsInfoRepo)
-- Hardware specifications (Sol workstation)
-- Network topology and routing
-- Existing Docker stack configuration
-- Caddy and Cloudflared configurations
-
-## 🤖 AI Agent Development
-
-This project is designed for collaborative development with AI agents:
-
-- **GitHub Copilot**: Repository-specific instructions in `.github/copilot-instructions.md`
-- **Claude Code**: Access via GitHub integration
-- **Context Source**: Reference SystemsInfoRepo for infrastructure understanding
-
-### Development Workflow
-
-1. **Before starting work**:
-   ```bash
-   ./sync_online_repos_to_local.sh
-   ```
-
-2. **After making changes**:
-   ```bash
-   ./sync_local_to_online_repos.sh
-   ```
-
-## 🔐 Security & Privacy
-
-- **No third-party transcription**: All processing on local GPU
-- **Cloudflare Access**: Email-based authentication and authorization
-- **Per-user isolation**: Separate storage directories and database records
-- **Signed URLs**: Time-limited access to audio downloads
-- **No indexing**: `X-Robots-Tag: noindex` on all endpoints
-
-## 📊 System Requirements
-
-### Minimum Hardware
-- **GPU**: NVIDIA GPU with 8GB+ VRAM (RTX 3070 or better)
-- **RAM**: 16GB system RAM
-- **Storage**: 100GB+ available space for audio files
-- **Network**: Stable internet for uploads (resumable via Tus)
-
-### Recommended (Current Setup)
-- **GPU**: RTX 4090 (24GB VRAM)
-- **CPU**: AMD Ryzen 9 7950X
-- **RAM**: 128GB DDR5
-- **Storage**: NVMe SSD storage
-
-## 🚦 Status
-
-**Current Phase**: 🔧 **DEBUGGING** - Core system working, fixing transcript display
-**Completion**: ~85% - Transcription pipeline functional, frontend integration in progress
-
-### ✅ **What's Working**
-
-- **Web Interface**: Deployed at `transcriber.solfamily.group`
-- **File Upload**: Multi-format audio upload with resumable transfers
-- **GPU Transcription**: RTX 4090 running Faster-Whisper large-v3 model
-- **Database Integration**: PostgreSQL with `transcriber` schema
-- **n8n Workflows**: File ingest and transcription orchestration active
-- **Recording History**: Frontend displays recordings with status
-
-### 🔧 **Currently Debugging**
-
-- **Transcript Display**: "Transcripts not yet available" despite successful processing
-- **Database Linking**: Verifying transcript records are properly associated with recordings
-- **API Response**: Ensuring transcript content reaches frontend
-
-### � **Next Steps**
-
-- Fix transcript display in frontend recording detail view
-- Mobile app integration (iOS Shortcuts, Android Bridge)
-- Multi-speaker diarization optimization
-- Cloudflare Access authentication setup
-
----
-
-## 📝 License
-
-Private project - not for public distribution.
-
-## 👨‍💻 Maintainer
-
-**Ben** - [GitHub](https://github.com/tfp24601)
-
-Built with assistance from AI agents (GitHub Copilot, Claude Code).
-
----
-
-*For technical support and infrastructure questions, reference the SystemsInfoRepo or contact the maintainer.*
+- The first transcription request will download and load the Whisper model, which can take a few minutes depending on model size and hardware.
+- Populate `TRANSCRIPTION_OUTPUT_DIR` with persistent storage (e.g., a mounted volume) if you are running inside Docker.
+- The browser recording feature relies on HTTPS in some browsers; when testing locally over HTTP, Chrome/Edge allow access on `localhost` only.
+- To free GPU/CPU memory between requests, restart the server—the model stays cached in memory for speed.
+- For faster CPU inference, try `WHISPER_COMPUTE_TYPE=int8_float16` or `int8` (at some accuracy cost). For higher accuracy, switch to `medium` or `large-v2` using the dropdown or `WHISPER_MODEL` default.
