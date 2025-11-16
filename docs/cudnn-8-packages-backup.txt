@@ -1,0 +1,1 @@
+ii  nvidia-cudnn                                     8.9.2.26~cuda12+3                         amd64        NVIDIA CUDA Deep Neural Network library (install script)

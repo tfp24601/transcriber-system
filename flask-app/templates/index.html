@@ -1,150 +1,822 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Flask Whisper Transcriber</title>
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/milligram/1.4.1/milligram.min.css"
-      integrity="sha512-AGP8UNYps+2glGXU4WYt2btMHAYu0F4xU1JMuwMiwFkQL9jml9djsuCobQCao5jqnMDLd5i2itoP/aWpZo6Ckg=="
-      crossorigin="anonymous"
-      referrerpolicy="no-referrer"
-    />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transcriber - AI-Powered Audio Transcription</title>
     <style>
-      body {
-        margin: 2rem;
-      }
-      .controls {
-        display: flex;
-        gap: 1rem;
-        flex-wrap: wrap;
-        margin-bottom: 1rem;
-      }
-      .recording-indicator {
-        color: #d91c1c;
-        font-weight: 600;
-      }
-      audio#playback {
-        display: none;
-        margin-top: 0.5rem;
-      }
-      .hidden {
-        display: none !important;
-      }
-      .meta-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 0.5rem 1rem;
-      }
-      .notice {
-        border: 1px solid #f0ad4e;
-        background: #fff9e6;
-        border-radius: 4px;
-        padding: 1rem;
-        margin-bottom: 1rem;
-      }
-      .note {
-        display: inline-block;
-        margin-left: 0.5rem;
-        font-size: 0.9rem;
-        color: #b36b00;
-      }
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --text-muted: #94a3b8;
+            --border: #475569;
+            --shadow: rgba(0, 0, 0, 0.3);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, #1a2642 100%);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 2rem 1rem;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+        
+        .card {
+            background: var(--bg-secondary);
+            border-radius: 1rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px var(--shadow);
+            border: 1px solid var(--border);
+        }
+        
+        .card h2 {
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+        
+        .badge-success {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }
+        
+        .badge-warning {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning);
+        }
+        
+        .badge-danger {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+        
+        input[type="file"],
+        input[type="number"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+        
+        input[type="file"]:focus,
+        input[type="number"]:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 200px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            line-height: 1.5;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: var(--bg-tertiary);
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .checkbox-group:hover {
+            background: var(--border);
+        }
+        
+        input[type="checkbox"] {
+            width: 1.25rem;
+            height: 1.25rem;
+            cursor: pointer;
+        }
+        
+        .checkbox-group label {
+            margin: 0;
+            cursor: pointer;
+            flex: 1;
+        }
+        
+        .btn {
+            padding: 0.875rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+        }
+        
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+        
+        .btn-secondary:hover:not(:disabled) {
+            background: var(--border);
+        }
+        
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+        
+        .btn-success:hover:not(:disabled) {
+            background: #059669;
+        }
+        
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .grid {
+            display: grid;
+            gap: 1rem;
+        }
+        
+        .grid-2 {
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        }
+        
+        .grid-3 {
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 0;
+        }
+        
+        .tab {
+            padding: 0.75rem 1.5rem;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-weight: 600;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+            position: relative;
+            bottom: -2px;
+        }
+        
+        .tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+        
+        .tab:hover:not(.active) {
+            color: var(--text-secondary);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .recording-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--danger);
+            font-weight: 600;
+        }
+        
+        .recording-pulse {
+            width: 12px;
+            height: 12px;
+            background: var(--danger);
+            border-radius: 50%;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        .status {
+            padding: 1rem 1.5rem;
+            border-radius: 0.5rem;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .status-info {
+            background: rgba(99, 102, 241, 0.2);
+            border: 1px solid var(--primary);
+            color: var(--primary);
+        }
+        
+        .status-success {
+            background: rgba(16, 185, 129, 0.2);
+            border: 1px solid var(--success);
+            color: var(--success);
+        }
+        
+        .status-error {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid var(--danger);
+            color: var(--danger);
+        }
+        
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        audio {
+            width: 100%;
+            margin-top: 0.5rem;
+        }
+        
+        .copy-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            padding: 0.5rem 1rem;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .copy-btn:hover {
+            background: var(--primary-dark);
+        }
+        
+        .transcript-wrapper {
+            position: relative;
+        }
+        
+        .metadata-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+        
+        .metadata-item {
+            background: var(--bg-tertiary);
+            padding: 1rem;
+            border-radius: 0.5rem;
+        }
+        
+        .metadata-label {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            margin-bottom: 0.25rem;
+        }
+        
+        .metadata-value {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .diagnostics {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid var(--warning);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .diagnostics h3 {
+            color: var(--warning);
+            margin-bottom: 0.5rem;
+        }
+        
+        .diagnostics ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .diagnostics li {
+            padding: 0.25rem 0;
+            color: var(--text-secondary);
+        }
+        
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .card {
+                padding: 1.5rem;
+            }
+            
+            .grid-2, .grid-3 {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
-    {% set frontend_config = {
-      "languages": languages,
-      "defaultLanguage": default_language,
-      "defaultBeamSize": beam_size,
-      "defaultTemperature": temperature,
-      "modelName": model_name,
-      "availableModels": available_models,
-      "defaultUseGpu": default_use_gpu,
-      "diagnosticNotes": diagnostic_notes,
-      "gpuSupported": gpu_supported
-    } %}
-    <script id="transcriber-config" type="application/json">
-      {{ frontend_config | tojson }}
-    </script>
-    <script src="{{ url_for('static', filename='js/app.js', v=asset_version) }}" defer></script>
-  </head>
-  <body>
-    <main>
-      <h1>Flask Whisper Transcriber</h1>
-      <p>
-        Default model: <strong>{{ model_name }}</strong>. Upload an existing audio file or record directly in the
-        browser, adjust the options you need, then click <em>Transcribe</em>.
-      </p>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎙️ Transcriber</h1>
+            <p class="subtitle">AI-Powered Audio Transcription & Diarization</p>
+        </header>
 
-      <section id="diagnostics" class="notice hidden">
-        <h2>Service diagnostics</h2>
-        <ul id="diagnostic-list"></ul>
-      </section>
-
-      <section id="input-section">
-        <form id="upload-form">
-          <fieldset>
-            <legend>Audio source</legend>
-            <label for="audio-file">Upload file</label>
-            <input id="audio-file" type="file" accept="audio/*" />
-
-            <div class="controls">
-              <button id="record-btn" type="button">Start recording</button>
-              <button id="stop-btn" type="button" class="button button-outline" disabled>
-                Stop recording
-              </button>
-              <span id="recording-indicator" class="recording-indicator hidden">Recording…</span>
-            </div>
-            <audio id="playback" controls></audio>
-          </fieldset>
-
-          <fieldset>
-            <legend>Whisper options</legend>
-            <label for="model">Model</label>
-            <select id="model" name="model"></select>
-
-            <label class="checkbox gpu-toggle">
-              <input id="use-gpu" type="checkbox" /> Use GPU acceleration
-              <span id="gpu-status" class="note hidden"></span>
-            </label>
-
-            <label for="language">Language</label>
-            <select id="language" name="language"></select>
-
-            <label>
-              <input id="translate" type="checkbox" /> Translate to English
-            </label>
-
-            <label for="temperature">Temperature</label>
-            <input id="temperature" type="number" step="0.1" min="0" max="1" />
-
-            <label for="beam-size">Beam size</label>
-            <input id="beam-size" type="number" min="1" max="10" />
-          </fieldset>
-
-          <button id="transcribe-btn" type="submit" class="button-primary">Transcribe</button>
-        </form>
-      </section>
-
-      <section id="status" class="hidden">
-        <h2>Status</h2>
-        <p id="status-message">Submitting…</p>
-      </section>
-
-      <section id="results" class="hidden">
-        <h2>Transcript</h2>
-        <textarea id="transcript-output" rows="12" readonly></textarea>
-
-        <h3>Metadata</h3>
-        <div id="metadata" class="meta-grid"></div>
-
-        <h3>Downloads</h3>
-        <div>
-          <a id="download-text" class="button" href="#" target="_blank" rel="noopener">Transcript (.txt)</a>
-          <a id="download-srt" class="button button-outline" href="#" target="_blank" rel="noopener"
-            >Captions (.srt)</a
-          >
+        {% if diagnostic_notes %}
+        <div class="diagnostics">
+            <h3>⚠️ System Diagnostics</h3>
+            <ul>
+                {% for note in diagnostic_notes %}
+                <li>{{ note }}</li>
+                {% endfor %}
+            </ul>
         </div>
-      </section>
-    </main>
-  </body>
+        {% endif %}
+
+        <div class="card">
+            <h2>
+                📤 Upload Audio
+                {% if gpu_supported %}
+                <span class="badge badge-success">GPU Ready</span>
+                {% endif %}
+            </h2>
+            
+            <form id="transcribe-form">
+                <div class="form-group">
+                    <label for="audio-file">Choose Audio File</label>
+                    <input type="file" id="audio-file" accept="audio/*" />
+                </div>
+
+                <div class="btn-group">
+                    <button type="button" id="record-btn" class="btn btn-secondary">
+                        🎤 Start Recording
+                    </button>
+                    <button type="button" id="stop-btn" class="btn btn-danger hidden">
+                        ⏹️ Stop Recording
+                    </button>
+                </div>
+
+                <div id="recording-indicator" class="recording-indicator hidden" style="margin-top: 1rem;">
+                    <span class="recording-pulse"></span>
+                    Recording in progress...
+                </div>
+
+                <audio id="playback" class="hidden" controls></audio>
+
+                <div class="tabs" style="margin-top: 2rem;">
+                    <button type="button" class="tab active" data-tab="backend">Backend</button>
+                    <button type="button" class="tab" data-tab="diarization">Diarization</button>
+                    <button type="button" class="tab" data-tab="advanced">Advanced</button>
+                </div>
+
+                <div id="backend-tab" class="tab-content active">
+                    <div class="form-group">
+                        <label for="backend">Transcription Backend</label>
+                        <select id="backend">
+                            <option value="local">Self-Hosted Whisper (GPU)</option>
+                            {% if openai_enabled %}
+                            <option value="openai">OpenAI Whisper API</option>
+                            {% endif %}
+                            {% if assemblyai_enabled %}
+                            <option value="assemblyai_diarize">AssemblyAI (with Diarization)</option>
+                            {% endif %}
+                        </select>
+                    </div>
+
+                    <div id="local-options">
+                        <div class="form-group">
+                            <label for="model">Whisper Model</label>
+                            <select id="model">
+                                {% for model in available_models %}
+                                <option value="{{ model }}" {% if model == model_name %}selected{% endif %}>
+                                    {{ model }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="use-gpu" {% if default_use_gpu %}checked{% endif %} 
+                                   {% if not gpu_supported %}disabled{% endif %} />
+                            <label for="use-gpu">
+                                Use GPU Acceleration
+                                {% if not gpu_supported %}
+                                <span class="badge badge-danger">Unavailable</span>
+                                {% endif %}
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="diarization-tab" class="tab-content">
+                    <div class="form-group">
+                        <label for="diarization">Speaker Diarization</label>
+                        <select id="diarization">
+                            <option value="off">Disabled</option>
+                            {% if local_diarization_enabled %}
+                            <option value="local">Local (pyannote - Uses VRAM)</option>
+                            {% endif %}
+                        </select>
+                        <small style="color: var(--text-muted); display: block; margin-top: 0.5rem;">
+                            Local diarization loads model on-demand and auto-unloads after processing.
+                        </small>
+                    </div>
+
+                    <div class="grid grid-2" id="speaker-settings">
+                        <div class="form-group">
+                            <label for="min-speakers">Min Speakers</label>
+                            <input type="number" id="min-speakers" min="0" max="20" value="{{ min_speakers }}" />
+                        </div>
+                        <div class="form-group">
+                            <label for="max-speakers">Max Speakers</label>
+                            <input type="number" id="max-speakers" min="1" max="20" value="{{ max_speakers }}" />
+                        </div>
+                    </div>
+                </div>
+
+                <div id="advanced-tab" class="tab-content">
+                    <div class="form-group">
+                        <label for="language">Language</label>
+                        <select id="language">
+                            {% for code, name in languages %}
+                            <option value="{{ code }}" {% if code == default_language %}selected{% endif %}>
+                                {{ name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="translate" />
+                        <label for="translate">Translate to English</label>
+                    </div>
+
+                    <div class="grid grid-2">
+                        <div class="form-group">
+                            <label for="temperature">Temperature</label>
+                            <input type="number" id="temperature" step="0.1" min="0" max="1" 
+                                   value="{{ temperature }}" />
+                        </div>
+                        <div class="form-group">
+                            <label for="beam-size">Beam Size</label>
+                            <input type="number" id="beam-size" min="1" max="10" value="{{ beam_size }}" />
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+                    🚀 Transcribe Audio
+                </button>
+            </form>
+        </div>
+
+        <div id="status-section" class="hidden">
+            <div id="status-message" class="status status-info">
+                <div class="spinner"></div>
+                <span>Processing...</span>
+            </div>
+        </div>
+
+        <div id="results-section" class="hidden">
+            <div class="card">
+                <h2>📝 Transcript</h2>
+                <div class="transcript-wrapper">
+                    <button id="copy-markdown" class="copy-btn">📋 Copy Markdown</button>
+                    <textarea id="transcript-output" readonly></textarea>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>📊 Metadata</h2>
+                <div id="metadata-grid" class="metadata-grid"></div>
+            </div>
+
+            <div class="card">
+                <h2>💾 Downloads</h2>
+                <div class="btn-group">
+                    <a id="download-text" class="btn btn-secondary" href="#" target="_blank">
+                        📄 Plain Text
+                    </a>
+                    <a id="download-markdown" class="btn btn-primary" href="#" target="_blank">
+                        📝 Markdown
+                    </a>
+                    <a id="download-srt" class="btn btn-secondary" href="#" target="_blank">
+                        🎬 Subtitles (SRT)
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration from backend
+        const config = {
+            openaiEnabled: {{ openai_enabled|tojson }},
+            assemblyaiEnabled: {{ assemblyai_enabled|tojson }},
+            localDiarizationEnabled: {{ local_diarization_enabled|tojson }},
+            gpuSupported: {{ gpu_supported|tojson }}
+        };
+
+        // Elements
+        const form = document.getElementById('transcribe-form');
+        const audioFile = document.getElementById('audio-file');
+        const recordBtn = document.getElementById('record-btn');
+        const stopBtn = document.getElementById('stop-btn');
+        const recordingIndicator = document.getElementById('recording-indicator');
+        const playback = document.getElementById('playback');
+        const backend = document.getElementById('backend');
+        const localOptions = document.getElementById('local-options');
+        const statusSection = document.getElementById('status-section');
+        const statusMessage = document.getElementById('status-message');
+        const resultsSection = document.getElementById('results-section');
+        const transcriptOutput = document.getElementById('transcript-output');
+        const copyMarkdownBtn = document.getElementById('copy-markdown');
+        const metadataGrid = document.getElementById('metadata-grid');
+        
+        // Recording state
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let recordedBlob = null;
+
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabName = tab.dataset.tab;
+                
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                tab.classList.add('active');
+                document.getElementById(`${tabName}-tab`).classList.add('active');
+            });
+        });
+
+        // Backend selection
+        backend.addEventListener('change', () => {
+            if (backend.value === 'local') {
+                localOptions.classList.remove('hidden');
+            } else {
+                localOptions.classList.add('hidden');
+            }
+        });
+
+        // Recording
+        recordBtn.addEventListener('click', async () => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                recordedChunks = [];
+                mediaRecorder = new MediaRecorder(stream);
+                
+                mediaRecorder.ondataavailable = (e) => {
+                    if (e.data.size > 0) recordedChunks.push(e.data);
+                };
+                
+                mediaRecorder.onstop = () => {
+                    stream.getTracks().forEach(track => track.stop());
+                    recordedBlob = new Blob(recordedChunks, { type: 'audio/webm' });
+                    playback.src = URL.createObjectURL(recordedBlob);
+                    playback.classList.remove('hidden');
+                };
+                
+                mediaRecorder.start();
+                recordBtn.classList.add('hidden');
+                stopBtn.classList.remove('hidden');
+                recordingIndicator.classList.remove('hidden');
+            } catch (err) {
+                alert('Microphone access denied: ' + err.message);
+            }
+        });
+
+        stopBtn.addEventListener('click', () => {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+            }
+            recordBtn.classList.remove('hidden');
+            stopBtn.classList.add('hidden');
+            recordingIndicator.classList.add('hidden');
+        });
+
+        audioFile.addEventListener('change', () => {
+            recordedBlob = null;
+            if (audioFile.files.length > 0) {
+                playback.src = URL.createObjectURL(audioFile.files[0]);
+                playback.classList.remove('hidden');
+            }
+        });
+
+        // Copy markdown
+        copyMarkdownBtn.addEventListener('click', () => {
+            transcriptOutput.select();
+            document.execCommand('copy');
+            copyMarkdownBtn.textContent = '✅ Copied!';
+            setTimeout(() => {
+                copyMarkdownBtn.textContent = '📋 Copy Markdown';
+            }, 2000);
+        });
+
+        // Form submission
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const file = recordedBlob || audioFile.files[0];
+            if (!file) {
+                alert('Please select or record an audio file');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('audio', file, recordedBlob ? 'recording.webm' : file.name);
+            formData.append('backend', backend.value);
+            formData.append('model', document.getElementById('model').value);
+            formData.append('use_gpu', document.getElementById('use-gpu').checked);
+            formData.append('diarization', document.getElementById('diarization').value);
+            formData.append('min_speakers', document.getElementById('min-speakers').value);
+            formData.append('max_speakers', document.getElementById('max-speakers').value);
+            formData.append('language', document.getElementById('language').value);
+            formData.append('translate', document.getElementById('translate').checked);
+            formData.append('temperature', document.getElementById('temperature').value);
+            formData.append('beam_size', document.getElementById('beam-size').value);
+
+            // Show status
+            statusSection.classList.remove('hidden');
+            statusMessage.className = 'status status-info';
+            statusMessage.innerHTML = '<div class="spinner"></div><span>Processing your audio...</span>';
+            resultsSection.classList.add('hidden');
+
+            try {
+                const response = await fetch('/transcribe', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Transcription failed');
+                }
+
+                // Show success
+                statusMessage.className = 'status status-success';
+                statusMessage.innerHTML = '<span>✅ Transcription complete!</span>';
+
+                // Display results
+                transcriptOutput.value = data.markdown || data.transcript;
+                
+                // Metadata
+                metadataGrid.innerHTML = '';
+                Object.entries(data.metadata || {}).forEach(([key, value]) => {
+                    const item = document.createElement('div');
+                    item.className = 'metadata-item';
+                    item.innerHTML = `
+                        <div class="metadata-label">${key.replace(/_/g, ' ').toUpperCase()}</div>
+                        <div class="metadata-value">${value}</div>
+                    `;
+                    metadataGrid.appendChild(item);
+                });
+
+                // Download links
+                document.getElementById('download-text').href = data.downloads.text;
+                document.getElementById('download-markdown').href = data.downloads.markdown;
+                document.getElementById('download-srt').href = data.downloads.srt;
+
+                resultsSection.classList.remove('hidden');
+                
+                // Scroll to results
+                resultsSection.scrollIntoView({ behavior: 'smooth' });
+
+            } catch (err) {
+                statusMessage.className = 'status status-error';
+                statusMessage.innerHTML = `<span>❌ Error: ${err.message}</span>`;
+            }
+        });
+    </script>
+</body>
 </html>
