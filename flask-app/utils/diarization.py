@@ -51,11 +51,23 @@ def load_diarization_model(hf_token: str, device: str = "cuda"):
                 use_auth_token=hf_token
             )
         
+        # Try to move to GPU, but fall back to CPU if there are issues
         if device == "cuda" and torch.cuda.is_available():
-            pipeline.to(torch.device("cuda"))
-            _model_device = "cuda"
+            try:
+                pipeline.to(torch.device("cuda"))
+                _model_device = "cuda"
+                logger.info("Diarization model loaded on CUDA")
+            except RuntimeError as e:
+                if "cuDNN" in str(e) or "CUDNN" in str(e):
+                    logger.warning(f"cuDNN error when moving to GPU: {e}")
+                    logger.warning("Falling back to CPU for diarization")
+                    _model_device = "cpu"
+                    # Pipeline is already on CPU by default
+                else:
+                    raise
         else:
             _model_device = "cpu"
+            logger.info("Diarization model loaded on CPU")
         
         _diarization_model = pipeline
         logger.info("Diarization model loaded successfully")
