@@ -22,9 +22,14 @@ if lsof -i :5000 > /dev/null 2>&1; then
     fi
 fi
 
+# Set cuDNN library path for GPU acceleration
+CUDNN_DIR="$PWD/.venv/lib/python3.12/site-packages/nvidia/cudnn/lib"
+
 # Start with gunicorn
 echo "🚀 Starting Transcriber with Gunicorn..."
-nohup gunicorn \
+nohup env \
+    LD_LIBRARY_PATH="$CUDNN_DIR:${LD_LIBRARY_PATH:-}" \
+    gunicorn \
     --bind 0.0.0.0:5000 \
     --workers 2 \
     --timeout 300 \
