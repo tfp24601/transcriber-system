@@ -593,16 +593,21 @@ def unload_diarization():
 
 @app.post("/whisper/unload")
 def unload_whisper():
-    """Manually unload Whisper models to free VRAM"""
+    """Manually unload Whisper models to free VRAM
+    
+    NOTE: This only affects the current worker process.
+    With multiple Gunicorn workers, use /restart endpoint for full cleanup.
+    """
     global _MODEL_CACHE
     
     try:
         import gc
         import torch
+        import os
         
         models_unloaded = len(_MODEL_CACHE)
         
-        # Clear all cached models
+        # Clear all cached models in THIS worker
         _MODEL_CACHE.clear()
         
         # Force garbage collection
@@ -613,7 +618,7 @@ def unload_whisper():
             torch.cuda.empty_cache()
             torch.cuda.synchronize()
         
-        app.logger.info(f"Unloaded {models_unloaded} Whisper model(s)")
+        app.logger.info(f"Worker {os.getpid()}: Unloaded {models_unloaded} Whisper model(s)")
         
         # Get updated VRAM status
         from utils.gpu_monitor import get_full_gpu_status
@@ -621,12 +626,56 @@ def unload_whisper():
         
         return jsonify({
             "status": "success",
-            "message": f"Unloaded {models_unloaded} Whisper model(s)",
+            "message": f"Unloaded from worker {os.getpid()}. Use 'Restart Service' for full cleanup.",
             "models_unloaded": models_unloaded,
+            "worker_pid": os.getpid(),
             "gpu_status": gpu_status
         })
     except Exception as e:
         app.logger.error(f"Failed to unload Whisper models: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.post("/service/restart")
+def restart_service():
+    """Restart the Gunicorn service to fully clear all models from VRAM
+    
+    This triggers a graceful restart of all workers.
+    """
+    try:
+        import os
+        import signal
+        import subprocess
+        
+        # Get the master Gunicorn PID
+        result = subprocess.run(
+            ['pgrep', '-f', 'gunicorn.*app:app'],
+            capture_output=True,
+            text=True,
+            timeout=2
+        )
+        
+        pids = [int(pid) for pid in result.stdout.strip().split('\n') if pid]
+        
+        if not pids:
+            return jsonify({"error": "Could not find Gunicorn processes"}), 500
+        
+        # Find the master process (parent of workers)
+        master_pid = min(pids)  # Usually the lowest PID is the master
+        
+        app.logger.info(f"Sending HUP signal to Gunicorn master: {master_pid}")
+        
+        # Send HUP signal for graceful restart
+        os.kill(master_pid, signal.SIGHUP)
+        
+        return jsonify({
+            "status": "success",
+            "message": "Service restart initiated. Workers will reload gracefully.",
+            "master_pid": master_pid
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Failed to restart service: {e}")
         return jsonify({"error": str(e)}), 500
 
 
