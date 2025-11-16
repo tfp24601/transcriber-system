@@ -317,10 +317,11 @@ def transcribe():
             audio_file.save(tmp)
             tmp_path = Path(tmp.name)
 
-        # Process based on backend
+        # Process based on backend and diarization
         if backend == "openai":
             result = _transcribe_openai(tmp_path, language, temperature)
-        elif backend == "assemblyai_diarize":
+        elif diarization_mode == "assemblyai":
+            # Use AssemblyAI for both transcription and diarization
             result = _transcribe_assemblyai(tmp_path, min_speakers, max_speakers)
         else:  # local
             result = _transcribe_local(
@@ -348,12 +349,12 @@ def transcribe():
         segments = result.get("segments", [])
         has_speakers = any("speaker" in seg for seg in segments)
         
-        # Plain text
+        # Plain text - NO timestamps for non-diarized
         txt_content = segments_to_plain_text(segments, include_timestamps=False, include_speakers=has_speakers)
         txt_path.write_text(txt_content + "\n", encoding="utf-8")
         
-        # Markdown (formatted nicely)
-        md_content = segments_to_markdown(segments, include_timestamps=True, include_speakers=has_speakers)
+        # Markdown - timestamps only for diarized
+        md_content = segments_to_markdown(segments, include_timestamps=has_speakers, include_speakers=has_speakers)
         md_path.write_text(md_content + "\n", encoding="utf-8")
         
         # SRT subtitles

@@ -6,19 +6,21 @@
     <title>Transcriber - AI-Powered Audio Transcription</title>
     <style>
         :root {
-            --primary: #6366f1;
-            --primary-dark: #4f46e5;
+            --primary: #06b6d4;
+            --primary-dark: #0891b2;
             --success: #10b981;
-            --danger: #ef4444;
+            --danger: #f43f5e;
             --warning: #f59e0b;
-            --bg-primary: #0f172a;
-            --bg-secondary: #1e293b;
-            --bg-tertiary: #334155;
-            --text-primary: #f1f5f9;
-            --text-secondary: #cbd5e1;
-            --text-muted: #94a3b8;
-            --border: #475569;
-            --shadow: rgba(0, 0, 0, 0.3);
+            --bg-primary: #0a0e1a;
+            --bg-secondary: #1a1f2e;
+            --bg-tertiary: #2a3142;
+            --text-primary: #f0f9ff;
+            --text-secondary: #bae6fd;
+            --text-muted: #7dd3fc;
+            --border: #334155;
+            --shadow: rgba(0, 0, 0, 0.4);
+            --accent: #22d3ee;
+            --accent-dark: #06b6d4;
         }
         
         * {
@@ -29,7 +31,7 @@
         
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, var(--bg-primary) 0%, #1a2642 100%);
+            background: linear-gradient(135deg, #0a0e1a 0%, #0d1829 50%, #0a1520 100%);
             color: var(--text-primary);
             line-height: 1.6;
             min-height: 100vh;
@@ -50,7 +52,7 @@
             font-size: 2.5rem;
             font-weight: 700;
             margin-bottom: 0.5rem;
-            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            background: linear-gradient(135deg, #06b6d4 0%, #22d3ee 50%, #67e8f9 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -505,9 +507,6 @@
                             {% if openai_enabled %}
                             <option value="openai">OpenAI Whisper API</option>
                             {% endif %}
-                            {% if assemblyai_enabled %}
-                            <option value="assemblyai_diarize">AssemblyAI (with Diarization)</option>
-                            {% endif %}
                         </select>
                     </div>
 
@@ -544,19 +543,23 @@
                             {% if local_diarization_enabled %}
                             <option value="local">Local (pyannote - Uses VRAM)</option>
                             {% endif %}
+                            {% if assemblyai_enabled %}
+                            <option value="assemblyai">AssemblyAI API (Cloud)</option>
+                            {% endif %}
                         </select>
                         <small style="color: var(--text-muted); display: block; margin-top: 0.5rem;">
-                            Local diarization loads model on-demand and auto-unloads after processing.
+                            <strong>Local:</strong> Loads on-demand, auto-unloads VRAM after processing.<br>
+                            <strong>AssemblyAI:</strong> Cloud-based, no VRAM usage, high accuracy.
                         </small>
                     </div>
 
                     <div class="grid grid-2" id="speaker-settings">
                         <div class="form-group">
-                            <label for="min-speakers">Min Speakers</label>
+                            <label for="min-speakers">Min Speakers (optional)</label>
                             <input type="number" id="min-speakers" min="0" max="20" value="{{ min_speakers }}" />
                         </div>
                         <div class="form-group">
-                            <label for="max-speakers">Max Speakers</label>
+                            <label for="max-speakers">Max Speakers (optional)</label>
                             <input type="number" id="max-speakers" min="1" max="20" value="{{ max_speakers }}" />
                         </div>
                     </div>
