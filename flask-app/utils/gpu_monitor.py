@@ -78,11 +78,30 @@ def _identify_process(cmd: str, pid: str) -> str:
     elif 'open-webui' in cmd_lower or 'open_webui' in cmd_lower:
         return "🤖 Open WebUI"
     elif 'uvicorn' in cmd_lower and '8000' in cmd:
-        return "🗄️ Supabase Kong (API Gateway)"
+        # This is the diarizer-api container (internal 8000, external 8100)
+        return "🎤 Diarizer API (Old)"
     elif 'uvicorn' in cmd_lower:
         return "🔧 API Server"
+    elif 'main.py' in cmd and 'comfyui' in cmd_lower:
+        return "🎨 ComfyUI"
     elif 'main.py' in cmd and 'listen' in cmd:
-        return "🤖 LLM Server"
+        # Check working directory to identify
+        try:
+            import subprocess
+            cwd = subprocess.run(
+                ['readlink', '-f', f'/proc/{pid}/cwd'],
+                capture_output=True,
+                text=True,
+                timeout=1
+            ).stdout.strip().lower()
+            
+            if 'comfyui' in cwd:
+                return "🎨 ComfyUI"
+            elif 'kobold' in cwd:
+                return "🤖 KoboldCPP"
+        except:
+            pass
+        return "🤖 AI Model Server"
     elif 'rustdesk' in cmd_lower:
         return "🖥️ RustDesk"
     elif 'multiprocessing' in cmd or 'spawn_main' in cmd:
