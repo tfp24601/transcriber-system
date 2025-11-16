@@ -462,8 +462,19 @@ def _transcribe_local(
             segments = assign_speakers_to_segments(segments, diar_segments)
             app.logger.info("Local diarization complete")
         except Exception as e:
-            app.logger.error(f"Local diarization failed: {e}")
-            # Continue without diarization
+            error_msg = str(e)
+            app.logger.error(f"Local diarization failed: {error_msg}")
+            
+            # Check if it's an access/authentication error
+            if "403" in error_msg or "authorized" in error_msg.lower() or "gated" in error_msg.lower():
+                raise Exception(
+                    "Access denied to diarization model. Please:\n"
+                    "1. Visit https://huggingface.co/pyannote/speaker-diarization-3.1\n"
+                    "2. Accept the model terms\n"
+                    "3. Verify your HF_TOKEN has access"
+                )
+            else:
+                raise Exception(f"Diarization failed: {error_msg}")
 
     detected_language = info.language or picked_language or "unknown"
     
