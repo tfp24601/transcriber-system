@@ -32,8 +32,11 @@ nohup env \
     gunicorn \
     --bind 0.0.0.0:5000 \
     --workers 2 \
-    --timeout 300 \
-    --graceful-timeout 30 \
+    --timeout 600 \
+    --graceful-timeout 60 \
+    --worker-class sync \
+    --max-requests 1000 \
+    --max-requests-jitter 100 \
     app:app \
     > /tmp/transcriber-gunicorn.log 2>&1 &
 
