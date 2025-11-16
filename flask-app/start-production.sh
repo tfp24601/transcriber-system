@@ -32,8 +32,8 @@ nohup env \
     gunicorn \
     --bind 0.0.0.0:5000 \
     --workers 2 \
-    --timeout 600 \
-    --graceful-timeout 60 \
+    --timeout 3600 \
+    --graceful-timeout 120 \
     --worker-class sync \
     --max-requests 1000 \
     --max-requests-jitter 100 \
