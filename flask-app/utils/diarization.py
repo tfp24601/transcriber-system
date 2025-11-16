@@ -38,10 +38,18 @@ def load_diarization_model(hf_token: str, device: str = "cuda"):
         logger.info(f"Loading pyannote diarization model on {device}...")
         model_name = os.getenv("DIARIZATION_MODEL", "pyannote/speaker-diarization-3.1")
         
-        pipeline = Pipeline.from_pretrained(
-            model_name,
-            use_auth_token=hf_token
-        )
+        # Try new API first (token=), fall back to old API (use_auth_token=)
+        try:
+            pipeline = Pipeline.from_pretrained(
+                model_name,
+                token=hf_token
+            )
+        except TypeError:
+            # Fallback for older pyannote versions
+            pipeline = Pipeline.from_pretrained(
+                model_name,
+                use_auth_token=hf_token
+            )
         
         if device == "cuda" and torch.cuda.is_available():
             pipeline.to(torch.device("cuda"))
