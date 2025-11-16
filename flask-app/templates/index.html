@@ -496,12 +496,15 @@
                     </div>
                 </div>
 
-                <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
-                    <button id="unload-whisper" class="btn btn-danger" style="flex: 1;">
-                        🗑️ Unload Whisper Model
+                <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+                    <button id="unload-whisper" class="btn btn-danger" style="flex: 1; min-width: 200px;">
+                        🗑️ Unload Whisper (Current Worker)
                     </button>
-                    <button id="unload-diarization" class="btn btn-danger" style="flex: 1;">
+                    <button id="unload-diarization" class="btn btn-danger" style="flex: 1; min-width: 200px;">
                         🗑️ Unload Diarization
+                    </button>
+                    <button id="restart-service" class="btn btn-primary" style="flex: 1; min-width: 200px;">
+                        🔄 Restart Service (Full Cleanup)
                     </button>
                 </div>
 
@@ -989,6 +992,42 @@
                 const btn = document.getElementById('unload-diarization');
                 btn.disabled = false;
                 btn.textContent = '🗑️ Unload Diarization';
+            }
+        });
+        
+        // Restart Service
+        document.getElementById('restart-service').addEventListener('click', async () => {
+            if (!confirm('Restart the transcriber service?\n\nThis will:\n• Unload ALL models from ALL workers\n• Free all VRAM used by transcriber\n• Service will be back online in ~5 seconds\n\nContinue?')) {
+                return;
+            }
+            
+            try {
+                const btn = document.getElementById('restart-service');
+                btn.disabled = true;
+                btn.textContent = '⏳ Restarting...';
+                
+                const response = await fetch('/service/restart', { method: 'POST' });
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert('✅ Service restarting...\n\nRefreshing VRAM monitor in 5 seconds.');
+                    
+                    // Wait for service to restart, then refresh VRAM
+                    setTimeout(async () => {
+                        await updateVRAM();
+                        btn.disabled = false;
+                        btn.textContent = '🔄 Restart Service (Full Cleanup)';
+                    }, 5000);
+                } else {
+                    alert(`❌ Failed: ${data.error}`);
+                    btn.disabled = false;
+                    btn.textContent = '🔄 Restart Service (Full Cleanup)';
+                }
+            } catch (err) {
+                alert(`❌ Error: ${err.message}`);
+                const btn = document.getElementById('restart-service');
+                btn.disabled = false;
+                btn.textContent = '🔄 Restart Service (Full Cleanup)';
             }
         });
         
