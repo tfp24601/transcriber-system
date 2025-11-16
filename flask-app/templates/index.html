@@ -463,6 +463,57 @@
         </div>
         {% endif %}
 
+        <div class="card" id="vram-monitor">
+            <h2>
+                🎮 GPU VRAM Monitor
+                <button id="refresh-vram" class="btn btn-secondary" style="margin-left: auto; padding: 0.5rem 1rem; font-size: 0.875rem;">
+                    🔄 Refresh
+                </button>
+            </h2>
+            
+            <div id="vram-loading" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                Loading GPU status...
+            </div>
+            
+            <div id="vram-content" class="hidden">
+                <div class="vram-summary" style="margin-bottom: 1.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <span id="gpu-name" style="font-weight: 600; color: var(--accent);"></span>
+                        <span id="vram-percentage" style="font-size: 1.25rem; font-weight: 700; color: var(--primary);"></span>
+                    </div>
+                    
+                    <div style="background: var(--bg-tertiary); height: 24px; border-radius: 12px; overflow: hidden; position: relative;">
+                        <div id="vram-bar" style="background: linear-gradient(90deg, var(--primary), var(--accent)); height: 100%; width: 0%; transition: width 0.5s;"></div>
+                        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--text-primary); font-size: 0.875rem; font-weight: 600; mix-blend-mode: difference;">
+                            <span id="vram-text"></span>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.875rem; color: var(--text-muted);">
+                        <span>Used: <strong id="vram-used"></strong></span>
+                        <span>Free: <strong id="vram-free"></strong></span>
+                        <span>Total: <strong id="vram-total"></strong></span>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+                    <button id="unload-whisper" class="btn btn-danger" style="flex: 1;">
+                        🗑️ Unload Whisper Model
+                    </button>
+                    <button id="unload-diarization" class="btn btn-danger" style="flex: 1;">
+                        🗑️ Unload Diarization
+                    </button>
+                </div>
+
+                <details open style="background: var(--bg-tertiary); padding: 1rem; border-radius: 0.5rem;">
+                    <summary style="cursor: pointer; font-weight: 600; margin-bottom: 1rem; color: var(--text-secondary);">
+                        📊 Process Breakdown (<span id="process-count">0</span> processes)
+                    </summary>
+                    <div id="process-list" style="display: flex; flex-direction: column; gap: 0.75rem;"></div>
+                </details>
+            </div>
+        </div>
+
         <div class="card">
             <h2>
                 📤 Upload Audio
@@ -820,6 +871,137 @@
                 statusMessage.innerHTML = `<span>❌ Error: ${err.message}</span>`;
             }
         });
+
+        // VRAM Monitor Functions
+        async function updateVRAM() {
+            try {
+                const response = await fetch('/gpu/status');
+                const data = await response.json();
+                
+                if (!data.available || !data.memory) {
+                    document.getElementById('vram-loading').textContent = 'GPU not available';
+                    return;
+                }
+                
+                // Hide loading, show content
+                document.getElementById('vram-loading').classList.add('hidden');
+                document.getElementById('vram-content').classList.remove('hidden');
+                
+                const mem = data.memory;
+                
+                // Update GPU name and percentage
+                document.getElementById('gpu-name').textContent = mem.gpu_name;
+                document.getElementById('vram-percentage').textContent = `${mem.usage_percent}%`;
+                
+                // Update progress bar
+                document.getElementById('vram-bar').style.width = `${mem.usage_percent}%`;
+                document.getElementById('vram-text').textContent = `${mem.used_gb} GB / ${mem.total_gb} GB`;
+                
+                // Update stats
+                document.getElementById('vram-used').textContent = `${mem.used_gb} GB`;
+                document.getElementById('vram-free').textContent = `${mem.free_gb} GB`;
+                document.getElementById('vram-total').textContent = `${mem.total_gb} GB`;
+                
+                // Update process count
+                document.getElementById('process-count').textContent = data.process_count || 0;
+                
+                // Update process list
+                const processList = document.getElementById('process-list');
+                processList.innerHTML = '';
+                
+                if (data.processes && data.processes.length > 0) {
+                    data.processes.forEach(proc => {
+                        const processDiv = document.createElement('div');
+                        processDiv.style.cssText = 'background: var(--bg-primary); padding: 0.75rem; border-radius: 0.5rem; border-left: 3px solid var(--primary);';
+                        processDiv.innerHTML = `
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                                <strong>${proc.name}</strong>
+                                <span style="color: var(--accent); font-weight: 600;">${proc.vram_gb} GB</span>
+                            </div>
+                            <div style="font-size: 0.875rem; color: var(--text-muted);">
+                                PID: ${proc.pid} | ${proc.command}
+                            </div>
+                        `;
+                        processList.appendChild(processDiv);
+                    });
+                } else {
+                    processList.innerHTML = '<p style="color: var(--text-muted); text-align: center;">No GPU processes detected</p>';
+                }
+                
+            } catch (err) {
+                console.error('Failed to update VRAM:', err);
+                document.getElementById('vram-loading').textContent = 'Failed to load GPU status';
+            }
+        }
+        
+        // Unload Whisper Model
+        document.getElementById('unload-whisper').addEventListener('click', async () => {
+            if (!confirm('Unload Whisper model? It will reload automatically on next transcription.')) {
+                return;
+            }
+            
+            try {
+                const btn = document.getElementById('unload-whisper');
+                btn.disabled = true;
+                btn.textContent = '⏳ Unloading...';
+                
+                const response = await fetch('/whisper/unload', { method: 'POST' });
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert(`✅ ${data.message}\n\nVRAM freed!`);
+                    await updateVRAM();
+                } else {
+                    alert(`❌ Failed: ${data.error}`);
+                }
+            } catch (err) {
+                alert(`❌ Error: ${err.message}`);
+            } finally {
+                const btn = document.getElementById('unload-whisper');
+                btn.disabled = false;
+                btn.textContent = '🗑️ Unload Whisper Model';
+            }
+        });
+        
+        // Unload Diarization Model
+        document.getElementById('unload-diarization').addEventListener('click', async () => {
+            if (!confirm('Unload diarization model? It will reload if needed.')) {
+                return;
+            }
+            
+            try {
+                const btn = document.getElementById('unload-diarization');
+                btn.disabled = true;
+                btn.textContent = '⏳ Unloading...';
+                
+                const response = await fetch('/diarization/unload', { method: 'POST' });
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert('✅ Diarization model unloaded!');
+                    await updateVRAM();
+                } else {
+                    alert(`❌ Failed: ${data.error}`);
+                }
+            } catch (err) {
+                alert(`❌ Error: ${err.message}`);
+            } finally {
+                const btn = document.getElementById('unload-diarization');
+                btn.disabled = false;
+                btn.textContent = '🗑️ Unload Diarization';
+            }
+        });
+        
+        // Refresh VRAM button
+        document.getElementById('refresh-vram').addEventListener('click', () => {
+            updateVRAM();
+        });
+        
+        // Auto-refresh VRAM every 10 seconds
+        setInterval(updateVRAM, 10000);
+        
+        // Initial VRAM load
+        updateVRAM();
     </script>
 </body>
 </html>
