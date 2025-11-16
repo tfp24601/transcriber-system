@@ -58,29 +58,36 @@ def segments_to_markdown(
             if speaker != current_speaker:
                 # Flush previous speaker block
                 if speaker_block:
-                    lines.append("\n".join(speaker_block))
+                    lines.append(" ".join(speaker_block))
                     lines.append("")
                     speaker_block = []
                 
                 # Start new speaker block
                 current_speaker = speaker
-                speaker_block.append(f"## {speaker}\n")
+                lines.append(f"## {speaker}\n")
             
             # Add text with optional timestamp
             if include_timestamps:
-                speaker_block.append(f"**[{format_timestamp(start)}]** {text}")
+                lines.append(f"**[{format_timestamp(start)}]** {text}")
             else:
-                speaker_block.append(text)
+                # Flowing text - just concatenate with space
+                lines.append(text)
         else:
-            # No speakers, just text with optional timestamps
+            # No speakers, just flowing text
             if include_timestamps:
-                lines.append(f"**[{format_timestamp(start)}]** {text}\n")
+                lines.append(f"**[{format_timestamp(start)}]** {text}")
             else:
-                lines.append(f"{text}\n")
+                # Pure flowing text - join all segments into paragraphs
+                lines.append(text)
     
-    # Flush final speaker block
+    # Flush final speaker block if any
     if speaker_block:
-        lines.append("\n".join(speaker_block))
+        lines.append(" ".join(speaker_block))
+    
+    # Join everything - if no timestamps/speakers, join with spaces for flowing text
+    if not include_timestamps and not include_speakers:
+        # Group into paragraphs by combining all segments
+        return "# Transcript\n\n" + " ".join(seg.get("text", "").strip() for seg in segments if seg.get("text", "").strip())
     
     return "\n".join(lines)
 
