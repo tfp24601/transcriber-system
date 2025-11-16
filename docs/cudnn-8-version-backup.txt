@@ -1,0 +1,7 @@
+nvidia-cudnn:
+  Installed: 8.9.2.26~cuda12+3
+  Candidate: 8.9.2.26~cuda12+3
+  Version table:
+ *** 8.9.2.26~cuda12+3 500
+        500 http://us.archive.ubuntu.com/ubuntu noble/multiverse amd64 Packages
+        100 /var/lib/dpkg/status
