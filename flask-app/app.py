@@ -47,6 +47,7 @@ from utils.formatters import (
     segments_to_plain_text,
     segments_to_srt
 )
+from utils.gpu_monitor import get_full_gpu_status, get_gpu_processes
 
 # Configuration
 DEFAULT_LANGUAGES: List[tuple[str, str]] = [
@@ -588,6 +589,61 @@ def unload_diarization():
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@app.post("/whisper/unload")
+def unload_whisper():
+    """Manually unload Whisper models to free VRAM"""
+    global _MODEL_CACHE
+    
+    try:
+        import gc
+        import torch
+        
+        models_unloaded = len(_MODEL_CACHE)
+        
+        # Clear all cached models
+        _MODEL_CACHE.clear()
+        
+        # Force garbage collection
+        gc.collect()
+        
+        # Clear CUDA cache
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            torch.cuda.synchronize()
+        
+        app.logger.info(f"Unloaded {models_unloaded} Whisper model(s)")
+        
+        # Get updated VRAM status
+        from utils.gpu_monitor import get_full_gpu_status
+        gpu_status = get_full_gpu_status()
+        
+        return jsonify({
+            "status": "success",
+            "message": f"Unloaded {models_unloaded} Whisper model(s)",
+            "models_unloaded": models_unloaded,
+            "gpu_status": gpu_status
+        })
+    except Exception as e:
+        app.logger.error(f"Failed to unload Whisper models: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.get("/gpu/status")
+def gpu_status():
+    """Get current GPU status including VRAM usage and processes"""
+    try:
+        from utils.gpu_monitor import get_full_gpu_status
+        
+        status = get_full_gpu_status()
+        status['whisper_models_loaded'] = len(_MODEL_CACHE)
+        status['diarization_loaded'] = is_diarization_loaded()
+        
+        return jsonify(status)
+    except Exception as e:
+        app.logger.error(f"Failed to get GPU status: {e}")
+        return jsonify({"error": str(e), "available": False}), 500
 
 
 def _resolve_current_user_dir(create: bool = False) -> Tuple[str, Path]:
