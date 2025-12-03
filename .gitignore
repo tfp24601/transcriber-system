@@ -39,3 +39,9 @@ Thumbs.db
 *.log
 .env
 .env.*
+
+# Legacy archive with sensitive data
+old/
+
+# API keys and credentials
+docs/API.md
