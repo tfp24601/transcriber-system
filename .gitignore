@@ -48,3 +48,10 @@ docs/API.md
 
 # Transcription outputs (user data)
 transcriptions/
+
+# Sync scripts (contain personal paths/info)
+sync_local_to_online_repos.sh
+sync_online_repos_to_local.sh
+
+# Screenshot/temporary files
+CopyQ.shvNol.png
