@@ -213,4 +213,4 @@ Built with:
 
 ---
 
-**Built for Sol Family Group - Your personal transcription powerhouse!** 🚀
+**Built for <SERVER> Family Group - Your personal transcription powerhouse!** 🚀

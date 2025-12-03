@@ -183,8 +183,8 @@ The codebase is modular:
 ## Production Deployment
 
 Current production setup (from playbook):
-- Application: Sol (192.168.50.10:5000)
-- Reverse Proxy: lunanode4 (Caddy)
+- Application: <SERVER> (<INTERNAL_IP>:5000)
+- Reverse Proxy: <PROXY_SERVER> (Caddy)
 - Public URL: https://<your-domain>
 
 Service is managed by systemd and auto-restarts on failure.

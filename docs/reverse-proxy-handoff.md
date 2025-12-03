@@ -4,8 +4,8 @@ Last updated: 2025-09-30
 
 ## 0. Quick Summary of Updated Reverse Proxy Plan
 
-- Keep the Flask app running on **Sol** (192.168.50.10) on port `5000` using its existing Python environment.
-- Reverse proxy from **lunanode4 Caddy → Sol:5000**, following the same pattern as other services in the stack.
+- Keep the Flask app running on **<SERVER>** (<INTERNAL_IP>) on port `5000` using its existing Python environment.
+- Reverse proxy from **<PROXY_SERVER> Caddy → <SERVER>:5000**, following the same pattern as other services in the stack.
 - Cloudflared continues routing `<your-domain>` to `http://localhost:8000` (Caddy).
 - Switching to an alternate port (e.g., `5151`) is optional; do so only if you want to reserve `5000` for development.
 
@@ -45,14 +45,14 @@ Last updated: 2025-09-30
 
 ## 4. Desired Goal for Next Agent
 
-> "Move the Flask transcription service behind the reverse proxy on lunanode4 using Caddy, fronted by Cloudflare."
+> "Move the Flask transcription service behind the reverse proxy on <PROXY_SERVER> using Caddy, fronted by Cloudflare."
 
 ### Target Architecture
 
-1. **Host:** `lunanode4` (Ubuntu VM with GPU access).
+1. **Host:** `<PROXY_SERVER>` (Ubuntu VM with GPU access).
 2. **Application process:** Flask app managed by `systemd`, using an environment file and persistent transcript directory.
-3. **Reverse proxy:** Caddy on lunanode4, serving HTTPS (Cloudflared tunnel) and forwarding to the Flask backend.
-4. **DNS / CDN:** Cloudflare routes traffic to lunanode4 via the Cloudflared tunnel; confirm DNS and SSL mode.
+3. **Reverse proxy:** Caddy on <PROXY_SERVER>, serving HTTPS (Cloudflared tunnel) and forwarding to the Flask backend.
+4. **DNS / CDN:** Cloudflare routes traffic to <PROXY_SERVER> via the Cloudflared tunnel; confirm DNS and SSL mode.
 
 ## 5. Outstanding Tasks
 
@@ -61,12 +61,12 @@ Last updated: 2025-09-30
    - Confirm the trusted headers (e.g., `CF-Access-Authenticated-User-Email`) arrive in Flask via Caddy.
 2. **Finalize monitoring & alerting**
    - Point uptime checks at `https://<your-domain>/healthz`.
-   - Establish log review cadence on Sol (`journalctl -u transcriber.service`) and lunanode4 (Caddy logs).
+   - Establish log review cadence on <SERVER> (`journalctl -u transcriber.service`) and <PROXY_SERVER> (Caddy logs).
 3. **Run public smoke tests**
    - Exercise an end-to-end transcription through the Cloudflare hostname.
-   - Verify per-user transcript directories populate correctly on Sol.
+   - Verify per-user transcript directories populate correctly on <SERVER>.
 
-## 6. Always-on service deployment on Sol
+## 6. Always-on service deployment on <SERVER>
 
 ### 6.1 Prepare environment
 
@@ -95,9 +95,9 @@ TRANSCRIBER_USER_HEADER=CF-Access-Authenticated-User-Email
 TRANSCRIBER_ALT_USER_HEADER=
 ```
 
-> **Status note (2025-09-30):** The systemd unit and environment below are live on Sol; keep this section handy for rebuilds or disaster recovery.
+> **Status note (2025-09-30):** The systemd unit and environment below are live on <SERVER>; keep this section handy for rebuilds or disaster recovery.
 
-### 6.2 systemd unit on Sol
+### 6.2 systemd unit on <SERVER>
 
 Save as `/etc/systemd/system/transcriber.service` (or symlink from the repo).
 
@@ -108,7 +108,7 @@ After=network.target
 
 [Service]
 Type=simple
-User=ben
+User=<user>
 WorkingDirectory=/path/to/transcriber/flask-app
 EnvironmentFile=/path/to/transcriber/flask-app/transcriber.env
 ExecStart=/path/to/transcriber/flask-app/.venv/bin/gunicorn --bind 0.0.0.0:5000 --workers 2 --timeout 600 app:app
@@ -147,7 +147,7 @@ http://<your-domain> {
       respond "ok" 200
    }
 
-   reverse_proxy http://192.168.50.10:5000 {
+   reverse_proxy http://<INTERNAL_IP>:5000 {
       header_up Host {http.request.host}
       header_up X-Real-IP {http.request.remote}
       header_up X-Forwarded-For {http.request.remote}
@@ -187,9 +187,9 @@ Cloudflared already forwards to Caddy on port `8000`.
 - [ ] `transcriber.service` enabled and healthy (`systemctl status`, `journalctl`).
 - [ ] Caddy reloaded; `/healthz` reachable via `https://<your-domain>/healthz`.
 - [ ] Cloudflare Access (if enabled) tested with at least one user login.
-- [ ] End-to-end transcription succeeds; transcripts persist on Sol.
+- [ ] End-to-end transcription succeeds; transcripts persist on <SERVER>.
 - [ ] Transcript files write under per-user directories (`transcriptions/<user-slug>/...`).
-- [ ] Logs reviewed on Sol and lunanode4 for errors.
+- [ ] Logs reviewed on <SERVER> and <PROXY_SERVER> for errors.
 
 ## 9. Supporting Resources
 

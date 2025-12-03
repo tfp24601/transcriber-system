@@ -6,7 +6,7 @@ This document captures the work completed to bring the transcriber system's Flas
 
 ## 🎯 Goal
 
-Enable reliable Faster-Whisper inference on the Sol workstation's RTX 4090, using cuDNN-backed CUDA kernels inside the local Flask app while keeping fallbacks to CPU mode available.
+Enable reliable Faster-Whisper inference on the <SERVER> workstation's RTX 4090, using cuDNN-backed CUDA kernels inside the local Flask app while keeping fallbacks to CPU mode available.
 
 ---
 

@@ -37,7 +37,7 @@ transcriber/
 
 1. **Activate the virtualenv**
    ```bash
-   cd /home/ben/SolWorkingFolder/CustomSoftware/transcriber/flask-app
+   cd /path/to/transcriber/flask-app
    source .venv/bin/activate
    ```
 
@@ -104,7 +104,7 @@ transcriber/
 
 External references:
 - SystemsInfoRepo (hardware, networking, reverse proxy patterns)
-- **Existing Docker stack**: `/home/ben/SolWorkingFolder/docker-stack/docker-compose.yml`
+- **Existing Docker stack**: `/home/<user>/SolWorkingFolder/docker-stack/docker-compose.yml`
 - Archived docs in `old/legacy-stack/docs/` when historical context is needed
 
 ---
@@ -157,8 +157,8 @@ Update this playbook as those initiatives go live.
 ### API Access & Authentication
 
 **n8n Instance**: `https://<n8n-domain>`
-**API Key Location**: `/home/ben/SolWorkingFolder/CustomSoftware/transcriber/docs/API.md`
-**OpenAPI Schema**: `/home/ben/SolWorkingFolder/CustomSoftware/transcriber/reference/n8n API uploads/openapi.yml`
+**API Key Location**: `/path/to/transcriber/docs/API.md`
+**OpenAPI Schema**: `/path/to/transcriber/reference/n8n API uploads/openapi.yml`
 
 ### Common n8n API Operations
 
