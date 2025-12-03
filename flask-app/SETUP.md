@@ -185,7 +185,7 @@ The codebase is modular:
 Current production setup (from playbook):
 - Application: Sol (192.168.50.10:5000)
 - Reverse Proxy: lunanode4 (Caddy)
-- Public URL: https://transcriber.solfamily.group
+- Public URL: https://<your-domain>
 
 Service is managed by systemd and auto-restarts on failure.
 

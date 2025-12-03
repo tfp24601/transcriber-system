@@ -83,7 +83,7 @@ transcriber/
 
 ## 🌐 Deployment Objectives
 
-- Serve the Flask UI at `https://transcriber.solfamily.group` via Caddy + Cloudflared.
+- Serve the Flask UI at `https://<your-domain>` via Caddy + Cloudflared.
 - Replace the legacy backend currently mapped behind that domain with this Flask service when production-ready.
 - Keep the GPU runtime (cuDNN 9, CUDA 12.4) available on the host; reuse the same environment variables as the local run.
 - Future idea: surface buttons/endpoints that trigger n8n workflows (e.g., “Polish this as an email”). Design hooks but do not depend on archived workflows until instructed.
@@ -156,7 +156,7 @@ Update this playbook as those initiatives go live.
 
 ### API Access & Authentication
 
-**n8n Instance**: `https://n8n.solfamily.group`
+**n8n Instance**: `https://<n8n-domain>`
 **API Key Location**: `/home/ben/SolWorkingFolder/CustomSoftware/transcriber/docs/API.md`
 **OpenAPI Schema**: `/home/ben/SolWorkingFolder/CustomSoftware/transcriber/reference/n8n API uploads/openapi.yml`
 
@@ -164,13 +164,13 @@ Update this playbook as those initiatives go live.
 
 #### 1. List Workflows
 ```bash
-curl -s "https://n8n.solfamily.group/api/v1/workflows" \
+curl -s "https://<n8n-domain>/api/v1/workflows" \
   -H "X-N8N-API-KEY: [API_KEY_FROM_API_MD]" | jq '.data[] | {id, name}'
 ```
 
 #### 2. Get Specific Workflow
 ```bash
-curl -s "https://n8n.solfamily.group/api/v1/workflows/{WORKFLOW_ID}" \
+curl -s "https://<n8n-domain>/api/v1/workflows/{WORKFLOW_ID}" \
   -H "X-N8N-API-KEY: [API_KEY_FROM_API_MD]"
 ```
 
@@ -182,7 +182,7 @@ curl -s "https://n8n.solfamily.group/api/v1/workflows/{WORKFLOW_ID}" \
 jq '{name, nodes, connections, settings}' "n8n/workflows/[WORKFLOW_FILE].json" > /tmp/workflow_update.json
 
 # Update via API
-curl -X PUT "https://n8n.solfamily.group/api/v1/workflows/{WORKFLOW_ID}" \
+curl -X PUT "https://<n8n-domain>/api/v1/workflows/{WORKFLOW_ID}" \
   -H "X-N8N-API-KEY: [API_KEY_FROM_API_MD]" \
   -H "Content-Type: application/json" \
   -d @/tmp/workflow_update.json

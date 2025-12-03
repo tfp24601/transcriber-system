@@ -6,7 +6,7 @@ Last updated: 2025-09-30
 
 - Keep the Flask app running on **Sol** (192.168.50.10) on port `5000` using its existing Python environment.
 - Reverse proxy from **lunanode4 Caddy → Sol:5000**, following the same pattern as other services in the stack.
-- Cloudflared continues routing `transcriber.solfamily.group` to `http://localhost:8000` (Caddy).
+- Cloudflared continues routing `<your-domain>` to `http://localhost:8000` (Caddy).
 - Switching to an alternate port (e.g., `5151`) is optional; do so only if you want to reserve `5000` for development.
 
 ## 1. Snapshot of the Current Project
@@ -60,7 +60,7 @@ Last updated: 2025-09-30
    - Turn on the Access application and set `TRANSCRIBER_REQUIRE_AUTH=true` once policies are verified.
    - Confirm the trusted headers (e.g., `CF-Access-Authenticated-User-Email`) arrive in Flask via Caddy.
 2. **Finalize monitoring & alerting**
-   - Point uptime checks at `https://transcriber.solfamily.group/healthz`.
+   - Point uptime checks at `https://<your-domain>/healthz`.
    - Establish log review cadence on Sol (`journalctl -u transcriber.service`) and lunanode4 (Caddy logs).
 3. **Run public smoke tests**
    - Exercise an end-to-end transcription through the Cloudflare hostname.
@@ -131,7 +131,7 @@ journalctl -u transcriber.service -f
 ### 6.3 Caddy site block (excerpt)
 
 ```caddy
-http://transcriber.solfamily.group {
+http://<your-domain> {
    encode zstd gzip
 
    header {
@@ -167,7 +167,7 @@ http://transcriber.solfamily.group {
 
 ```yaml
 ingress:
-   - hostname: transcriber.solfamily.group
+   - hostname: <your-domain>
       service: "http://localhost:8000"
    - service: http_status:404
 ```
@@ -176,7 +176,7 @@ Cloudflared already forwards to Caddy on port `8000`.
 
 ## 7. Cloudflare-based access control roadmap
 
-1. **Protect the route with Cloudflare Access** – create an Access application for `transcriber.solfamily.group`, choose identity providers, and enable header injection (e.g., `Cf-Access-Authenticated-User-Email`).
+1. **Protect the route with Cloudflare Access** – create an Access application for `<your-domain>`, choose identity providers, and enable header injection (e.g., `Cf-Access-Authenticated-User-Email`).
 2. **Surface identity inside Flask** – read the header in Flask (`request.headers.get("Cf-Access-Authenticated-User-Email")`) and, if desired, route transcripts per user (e.g., `/transcriptions/{email}/`).
 3. **Enhance UX** – add logout links (Cloudflare Access revoke endpoint), audit logging, or role-based defaults. Until per-user directories are implemented, all users will still share the same transcript archive.
 
@@ -185,7 +185,7 @@ Cloudflared already forwards to Caddy on port `8000`.
 - [ ] Virtualenv refreshed and dependencies installed (`.venv`, `gunicorn`).
 - [ ] `transcriber.env` created with correct paths and permissions.
 - [ ] `transcriber.service` enabled and healthy (`systemctl status`, `journalctl`).
-- [ ] Caddy reloaded; `/healthz` reachable via `https://transcriber.solfamily.group/healthz`.
+- [ ] Caddy reloaded; `/healthz` reachable via `https://<your-domain>/healthz`.
 - [ ] Cloudflare Access (if enabled) tested with at least one user login.
 - [ ] End-to-end transcription succeeds; transcripts persist on Sol.
 - [ ] Transcript files write under per-user directories (`transcriptions/<user-slug>/...`).
