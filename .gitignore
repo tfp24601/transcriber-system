@@ -45,3 +45,6 @@ old/
 
 # API keys and credentials
 docs/API.md
+
+# Transcription outputs (user data)
+transcriptions/

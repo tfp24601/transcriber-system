@@ -34,6 +34,7 @@ The server exposes a minimal web UI (served from `/`) and a JSON transcription e
 - Configure Whisper options (language, translation toggle, beam size, temperature, GPU toggle)
 - Switch Whisper models on the fly from the UI (tiny → large)
 - Download generated `.txt` and `.srt` files
+- Real-time VRAM usage monitor for GPU inference tracking
 - CPU-friendly defaults with optional GPU / custom model configuration via environment variables
 
 ## Prerequisites
@@ -45,7 +46,7 @@ The server exposes a minimal web UI (served from `/`) and a JSON transcription e
 ## Quick start
 
 ```bash
-cd /home/ben/SolWorkingFolder/CustomSoftware/transcriber/flask-app
+cd flask-app
 python -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip

@@ -71,13 +71,13 @@ Last updated: 2025-09-30
 ### 6.1 Prepare environment
 
 ```bash
-cd /home/ben/SolWorkingFolder/CustomSoftware/transcriber/flask-app
+cd /path/to/transcriber/flask-app
 python -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt gunicorn
 deactivate
-mkdir -p /home/ben/SolWorkingFolder/CustomSoftware/transcriber/transcriptions
+mkdir -p /path/to/transcriber/transcriptions
 ```
 
 Create `flask-app/transcriber.env` with restrictive permissions (e.g., `chmod 640`).
@@ -86,7 +86,7 @@ Create `flask-app/transcriber.env` with restrictive permissions (e.g., `chmod 64
 FLASK_HOST=0.0.0.0
 FLASK_PORT=5000
 FLASK_DEBUG=false
-TRANSCRIPTION_OUTPUT_DIR=/home/ben/SolWorkingFolder/CustomSoftware/transcriber/transcriptions
+TRANSCRIPTION_OUTPUT_DIR=/path/to/transcriber/transcriptions
 WHISPER_MODEL=small
 WHISPER_DEFAULT_USE_GPU=auto
 TRANSCRIBER_REQUIRE_AUTH=false
@@ -109,9 +109,9 @@ After=network.target
 [Service]
 Type=simple
 User=ben
-WorkingDirectory=/home/ben/SolWorkingFolder/CustomSoftware/transcriber/flask-app
-EnvironmentFile=/home/ben/SolWorkingFolder/CustomSoftware/transcriber/flask-app/transcriber.env
-ExecStart=/home/ben/SolWorkingFolder/CustomSoftware/transcriber/flask-app/.venv/bin/gunicorn --bind 0.0.0.0:5000 --workers 2 --timeout 600 app:app
+WorkingDirectory=/path/to/transcriber/flask-app
+EnvironmentFile=/path/to/transcriber/flask-app/transcriber.env
+ExecStart=/path/to/transcriber/flask-app/.venv/bin/gunicorn --bind 0.0.0.0:5000 --workers 2 --timeout 600 app:app
 Restart=on-failure
 RestartSec=5
 

@@ -45,7 +45,7 @@ libcudnn_adv_infer.so -> libcudnn_adv_infer.so.8
 ### Affected Applications
 
 #### Transcriber App (BROKEN - needs cuDNN 9.x)
-- **Location**: `/home/ben/SolWorkingFolder/CustomSoftware/transcriber/flask-app/`
+- **Location**: `/path/to/transcriber/flask-app/`
 - **Dependencies**: 
   - `faster-whisper 1.2.0`
   - `ctranslate2 4.6.0` (requires cuDNN 9.1.0)
@@ -53,7 +53,7 @@ libcudnn_adv_infer.so -> libcudnn_adv_infer.so.8
 - **Impact**: Currently non-functional
 
 #### ComfyUI (Should remain working)
-- **Location**: `/home/ben/ComfyUI/`
+- **Location**: `/home/<user>/ComfyUI/`
 - **Dependencies**: 
   - `torch 2.5.1+cu121` (PyTorch with CUDA 12.1 support)
 - **Status**: Working
@@ -85,10 +85,10 @@ The transcriber app uses `ctranslate2 4.6.0`, which requires cuDNN 9.x libraries
 ### Step 1: Backup Current Package State
 ```bash
 # Save list of installed cuDNN packages
-dpkg -l | grep -i cudnn > /home/ben/SolWorkingFolder/CustomSoftware/transcriber/docs/cudnn-8-packages-backup.txt
+dpkg -l | grep -i cudnn > /path/to/transcriber/docs/cudnn-8-packages-backup.txt
 
 # Save current package version
-apt-cache policy nvidia-cudnn > /home/ben/SolWorkingFolder/CustomSoftware/transcriber/docs/cudnn-8-version-backup.txt
+apt-cache policy nvidia-cudnn > /path/to/transcriber/docs/cudnn-8-version-backup.txt
 ```
 
 ### Step 2: Remove cuDNN 8.9.2
@@ -116,7 +116,7 @@ sudo apt remove --purge nvidia-cudnn
 2. Install using the helper script:
 ```bash
 cd ~/Downloads
-/home/ben/SolWorkingFolder/CustomSoftware/transcriber/docs/install-cudnn9.sh
+/path/to/transcriber/docs/install-cudnn9.sh
 ```
 
    Or manually:
@@ -144,7 +144,7 @@ ls -la /usr/lib/x86_64-linux-gnu/libcudnn*
 ### Step 5: Test Transcriber App
 ```bash
 # Restart Gunicorn
-cd /home/ben/SolWorkingFolder/CustomSoftware/transcriber/flask-app
+cd /path/to/transcriber/flask-app
 pkill gunicorn
 ./run_gunicorn.sh
 
@@ -161,7 +161,7 @@ tail -f /tmp/transcriber-gunicorn.log
 ### Step 6: Test ComfyUI
 ```bash
 # Start ComfyUI (or if already running, generate an image)
-cd /home/ben/ComfyUI
+cd /home/<user>/ComfyUI
 ./venv/bin/python main.py
 
 # Test basic image generation to verify CUDA/cuDNN still work
@@ -201,7 +201,7 @@ If we need both versions:
 
 **Option A**: Downgrade to very old versions (NOT RECOMMENDED - loses features):
 ```bash
-cd /home/ben/SolWorkingFolder/CustomSoftware/transcriber/flask-app
+cd /path/to/transcriber/flask-app
 source .venv/bin/activate
 
 # Downgrade to ancient versions that work with cuDNN 8
@@ -234,7 +234,7 @@ pkill gunicorn
 
 4. Verify exact state matches backup:
    ```bash
-   diff <(dpkg -l | grep cudnn) /home/ben/SolWorkingFolder/CustomSoftware/transcriber/docs/cudnn-8-packages-backup.txt
+   diff <(dpkg -l | grep cudnn) /path/to/transcriber/docs/cudnn-8-packages-backup.txt
    ```
 
 ## Testing Checklist
@@ -281,7 +281,7 @@ After upgrade, verify:
 
 ## Helper Scripts Created
 
-- **Installation script**: `/home/ben/SolWorkingFolder/CustomSoftware/transcriber/docs/install-cudnn9.sh`
+- **Installation script**: `/path/to/transcriber/docs/install-cudnn9.sh`
   - Automates the entire cuDNN 9 installation process
   - Includes safety checks and confirmations
   - Usage: Download cuDNN 9 .deb to ~/Downloads/, then run the script

@@ -21,7 +21,7 @@ Enable reliable Faster-Whisper inference on the Sol workstation's RTX 4090, usin
 | Faster-Whisper | Installed via `requirements.txt` |
 | cuDNN | 9.1.1.17 (installed via `pip install nvidia-cudnn-cu12`) |
 | cuBLAS | 12.9.1.4 (pulled in automatically with cuDNN) |
-| Flask App Location | `/home/ben/SolWorkingFolder/CustomSoftware/transcriber/flask-app` |
+| Flask App Location | `/path/to/transcriber/flask-app` |
 | Log File | `/tmp/transcriber-flask.log` |
 
 ---
@@ -32,7 +32,7 @@ Enable reliable Faster-Whisper inference on the Sol workstation's RTX 4090, usin
     - Added NVIDIA's cuDNN 9.1 wheels to the Flask virtual environment:
 
        ```bash
-       cd /home/ben/SolWorkingFolder/CustomSoftware/transcriber/flask-app
+       cd /path/to/transcriber/flask-app
        .venv/bin/python -m pip install nvidia-cudnn-cu12==9.1.1.17
        ```
 
@@ -62,7 +62,7 @@ Enable reliable Faster-Whisper inference on the Sol workstation's RTX 4090, usin
 From the Flask app directory:
 
 ```bash
-cd /home/ben/SolWorkingFolder/CustomSoftware/transcriber/flask-app
+cd /path/to/transcriber/flask-app
 LD_DIR="$PWD/.venv/lib/python3.12/site-packages/nvidia/cudnn/lib"
 nohup env \
    LD_LIBRARY_PATH="$LD_DIR:${LD_LIBRARY_PATH:-}" \

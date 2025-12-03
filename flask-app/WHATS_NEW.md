@@ -69,7 +69,7 @@ When you enable local diarization:
 
 1. **Copy environment file:**
    ```bash
-   cd /home/ben/SolWorkingFolder/CustomSoftware/transcriber/flask-app
+   cd /path/to/transcriber/flask-app
    cp .env.example .env
    ```
 
@@ -103,7 +103,7 @@ Install as a system service:
 ```bash
 # Create log directory
 sudo mkdir -p /var/log/transcriber
-sudo chown ben:ben /var/log/transcriber
+sudo chown <user>:<user> /var/log/transcriber
 
 # Install service
 sudo cp transcriber.service /etc/systemd/system/

@@ -24,7 +24,7 @@ You need to accept the terms for **BOTH** of these models:
 ### Step 3: Update Your .env File
 
 ```bash
-cd /home/ben/SolWorkingFolder/CustomSoftware/transcriber/flask-app
+cd /path/to/transcriber/flask-app
 nano .env
 ```
 

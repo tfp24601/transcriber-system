@@ -254,6 +254,11 @@ def _get_model(model_name: str, device: str, compute_type: str) -> WhisperModel:
     return model
 
 
+@app.route("/favicon.ico")
+def favicon():
+    return send_file("static/favicon.ico", mimetype="image/vnd.microsoft.icon")
+
+
 @app.route("/")
 def index():
     return render_template(
